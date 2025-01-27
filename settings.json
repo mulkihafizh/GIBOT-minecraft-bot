@@ -6,9 +6,9 @@
   },
 
   "server": {
-    "ip": "localhost",
-    "port": 25565,
-    "version": "1.17.1"
+    "ip": "barreleye.aternos.host",
+    "port": 45515,
+    "version": "1.12.2"
   },
 
   "position": {
@@ -36,9 +36,8 @@
 
       "messages": [
         "I'm a regular player ",
-        "My owner is Xudwy ",
+        "My owner is Mak5er ",
         "I want be alone ",
-        "Visit my GitHub page! (Xudwy/Aternos-247-Bot)"
       ]
     },
 
