@@ -1,15 +1,16 @@
 {
-  "name": "aternos-247-bot",
-  "version": "0.1",
+  "name": "Minecraft Afk Bot",
+  "version": "2.1",
   "description": "Afk bot for minecraft servers.",
   "main": "bot.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "author": "Xudwy",
+  "author": "Lamgerr",
   "license": "MIT",
   "dependencies": {
-    "mineflayer": "^4.1.0",
-    "mineflayer-pathfinder": "^1.9.0"
+    "express": "^4.18.1",
+    "mineflayer": "^4.3.0",
+    "mineflayer-pathfinder": "^2.1.1"
   }
 }
