@@ -6,9 +6,9 @@
   },
 
   "server": {
-    "ip": "barreleye.aternos.host",
-    "port": 45515,
-    "version": "1.12.2"
+    "ip": "makser.aternos.me",
+    "port": 51498,
+    "version": "1.21.1"
   },
 
   "position": {
@@ -25,7 +25,7 @@
     },
 
     "anti-afk": {
-      "enabled": false,
+      "enabled": true,
       "sneak": false
     },
 
@@ -41,7 +41,7 @@
     },
 
     "chat-log": true,
-    "auto-reconnect": false,
+    "auto-reconnect": true,
     "auto-reconnect-delay": 5000
   }
 }
