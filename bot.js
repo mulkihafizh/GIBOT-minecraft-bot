@@ -1,8 +1,8 @@
 const mineflayer = require('mineflayer');
 const { pathfinder, Movements, goals: { GoalFollow, GoalBlock } } = require('mineflayer-pathfinder');
-const axios = require('axios');
 const config = require('./settings.json');
 const express = require('express');
+const { Client, GatewayIntentBits } = require('discord.js');
 
 const app = express();
 app.get('/', (req, res) => {
@@ -11,6 +11,12 @@ app.get('/', (req, res) => {
 app.listen(8000, () => {
   console.log('Server started');
 });
+
+const discordClient = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent] });
+discordClient.once('ready', () => {
+  console.log(`Discord bot logged in as ${discordClient.user.tag}`);
+});
+discordClient.login(config.discord.token);
 
 function createBot() {
   const bot = mineflayer.createBot({
@@ -73,14 +79,22 @@ function createBot() {
     }
   }
 
-  async function sendWebhookReport(message) {
-    try {
-      await axios.post(config.utils.webhook_url, {
-        content: message
-      });
-      console.log('[Webhook] Laporan throttling terkirim');
-    } catch (err) {
-      console.error('[Webhook Error]', err.message);
+  async function locateDiamonds() {
+    if (!autoMineEnabled) return;
+    const diamondId = mcData.blocksByName['diamond_ore'].id;
+
+    bot.chat('Mencari diamond...');
+
+    const block = bot.findBlock({
+      matching: diamondId,
+      maxDistance: 32,
+    });
+
+    if (block) {
+      bot.chat(`WEH ADA NIH DIAMOND : (${block.position.x}, ${block.position.y}, ${block.position.z})!`);
+      bot.lookAt(block.position.offset(0.5, 0.5, 0.5));
+    } else {
+      bot.chat('Tidak ada diamond di sekitar.');
     }
   }
 
@@ -95,31 +109,139 @@ function createBot() {
     }
 
     startAntiAfk();
-  });
 
-  bot.on('kicked', reason => {
-    const reasonStr = reason?.toString() || 'Unknown';
-    console.log(`\x1b[33m[WanderBot] Kicked from server. Reason: ${reasonStr}\x1b[0m`);
+    if (config['anti-lag'] && config['anti-lag'].enabled) {
+      console.log('[INFO] Anti-Lag module started');
+      setInterval(() => {
+        const drops = Object.values(bot.entities).filter(e => e.name === 'item');
+        const radius = config['anti-lag'].clear_radius;
+        if (drops.some(drop => bot.entity.position.distanceTo(drop.position) <= radius)) {
+          bot.chat(`/kill @e[type=item,distance=..${radius}]`);
+          console.log(`[AntiLagBot] Cleared dropped items within ${radius} blocks.`);
+        }
+      }, config['anti-lag'].clear_interval * 1000);
+    }
 
-    if (reasonStr.includes('Connection throttled')) {
-      sendWebhookReport(`⚠️ Bot di-kick karena throttling di server ${config.server.ip}:${config.server.port}`);
+    if (config.utils['auto-auth'].enabled) {
+      const password = config.utils['auto-auth'].password;
+      sendRegister(password).then(() => sendLogin(password)).catch(console.error);
+    }
+
+    if (config.utils['chat-messages'].enabled) {
+      const messages = config.utils['chat-messages']['messages'];
+      const delay = config.utils['chat-messages']['repeat-delay'] * 1000;
+      let i = 0;
+
+      setInterval(() => {
+        bot.chat(`${messages[i]}`);
+        i = (i + 1) % messages.length;
+      }, delay);
     }
   });
 
-  bot.on('end', () => {
-    const baseDelay = config.utils['auto-reconnect-delay'] || 30000;
-    const randomDelay = Math.floor(Math.random() * 15000); // random tambahan 0-15 detik
-    const totalDelay = baseDelay + randomDelay;
+  bot.on('chat', (username, message) => {
+    if (username === bot.username) return;
+    const msg = message.toLowerCase();
 
-    console.log(`[AutoReconnect] Bot akan mencoba reconnect dalam ${totalDelay / 1000} detik`);
-    setTimeout(() => {
-      createBot();
-    }, totalDelay);
+    if (msg.includes('diam')) {
+      isWandering = false;
+      bot.pathfinder.setGoal(null);
+      bot.chat('Baik! Aku akan diam di sini.');
+    } else if (msg.includes('jalan') || msg.includes('lanjut')) {
+      if (!isWandering) {
+        isWandering = true;
+        bot.chat('Oke! Aku akan jalan-jalan lagi.');
+        wanderAround();
+      }
+    } else if (msg.includes('ikut aku') || msg.includes('follow me')) {
+      const target = bot.players[username]?.entity;
+      if (target) {
+        bot.pathfinder.setMovements(defaultMove);
+        bot.pathfinder.setGoal(new GoalFollow(target, 1));
+        bot.chat(`Oke ${username}, aku ikut kamu! 🚶‍♂️`);
+      }
+    } else if (msg.includes('cari diamond')) {
+      locateDiamonds();
+    } else if (msg.includes('halo') || msg.includes('hi')) {
+      bot.chat(`Halo ${username}! Lagi ngapain?`);
+    } else if (msg.includes('bot')) {
+      bot.chat(`Ye, naon emang`);
+    } else if (msg.includes('siapa')) {
+      bot.chat(`cuman bot, gausa ganggu`);
+    } else if (msg.includes('main') || msg.includes('ayo')) {
+      bot.chat(`gamawu`);
+    } else if (msg.includes('help')) {
+      bot.chat(`cape si giffa edit codingannya, gabisa help, mikir sendiri aja`);
+    } else if (msg.includes('off') || msg.includes('matikan')) {
+      autoMineEnabled = false;
+      bot.chat('Oke, auto-search dimatikan.');
+    } else if (msg.includes('on') || msg.includes('nyalakan')) {
+      autoMineEnabled = true;
+      bot.chat('Oke, auto-search dinyalakan lagi.');
+    }
+  });
+
+  bot.on('goal_reached', () => {
+    console.log(`\x1b[32m[WanderBot] Sampai di tujuan ${bot.entity.position}\x1b[0m`);
+  });
+
+  bot.on('death', () => {
+    console.log(`\x1b[33m[WanderBot] Bot has died. Respawned.`);
+  });
+
+  if (config.utils['auto-reconnect']) {
+    bot.on('end', () => {
+      const baseDelay = config.utils['auto-reconnect-delay'] || 30000;
+      const randomDelay = Math.floor(Math.random() * 15000);
+      const totalDelay = baseDelay + randomDelay;
+
+      console.log(`[AutoReconnect] Bot akan mencoba reconnect dalam ${totalDelay / 1000} detik`);
+      const channel = discordClient.channels.cache.get(config.discord.channel_id);
+      if (channel) {
+        channel.send(`⚠️ **Bot disconnected**. Akan reconnect dalam ${totalDelay / 1000} detik.`);
+      }
+      setTimeout(() => {
+        createBot();
+      }, totalDelay);
+    });
+  }
+
+  bot.on('kicked', reason => {
+    const msg = `[WanderBot] Kicked from server. Reason: ${reason}`;
+    console.log('\x1b[33m', msg, '\x1b[0m');
+    const channel = discordClient.channels.cache.get(config.discord.channel_id);
+    if (channel) {
+      channel.send(`❌ ${msg}`);
+    }
   });
 
   bot.on('error', err => {
     console.log(`\x1b[31m[ERROR] ${err.message}`, '\x1b[0m');
+    const channel = discordClient.channels.cache.get(config.discord.channel_id);
+    if (channel) {
+      channel.send(`🚨 **ERROR**: ${err.message}`);
+    }
   });
+
+  function sendRegister(password) {
+    return new Promise((resolve, reject) => {
+      bot.chat(`/register ${password} ${password}`);
+      bot.once('chat', (username, message) => {
+        if (message.includes('successfully registered') || message.includes('already registered')) resolve();
+        else reject(`Registration failed: ${message}`);
+      });
+    });
+  }
+
+  function sendLogin(password) {
+    return new Promise((resolve, reject) => {
+      bot.chat(`/login ${password}`);
+      bot.once('chat', (username, message) => {
+        if (message.includes('successfully logged in')) resolve();
+        else reject(`Login failed: ${message}`);
+      });
+    });
+  }
 }
 
 createBot();
