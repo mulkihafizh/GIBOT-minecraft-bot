@@ -23,7 +23,7 @@ const originalLog = console.log;
 console.log = (...args) => {
   const logMessage = args.join(' ');
   if (clientDiscord && config.discord.channel_id) {
-    const channel = clientDiscord.channels.cache.get(process.env.DISCORD_CHANNEL_ID);
+  const channel = clientDiscord.channels.cache.get(process.env.DISCORD_CHANNEL_ID);
     if (channel) {
       channel.send('```' + logMessage + '```').catch(err => originalLog('Discord log error:', err));
     }
