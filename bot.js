@@ -12,11 +12,21 @@ app.listen(8000, () => {
   console.log('Server started');
 });
 
-const discordClient = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent] });
-discordClient.once('ready', () => {
-  console.log(`Discord bot logged in as ${discordClient.user.tag}`);
-});
-discordClient.login(config.discord.token);
+const clientDiscord = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent] });
+clientDiscord.login(config.discord.token);
+
+// Override console.log
+const originalLog = console.log;
+console.log = (...args) => {
+  const logMessage = args.join(' ');
+  if (clientDiscord && config.discord.channel_id) {
+    const channel = clientDiscord.channels.cache.get(config.discord.channel_id);
+    if (channel) {
+      channel.send('```' + logMessage + '```').catch(err => originalLog('Discord log error:', err));
+    }
+  }
+  originalLog(...args);
+};
 
 function createBot() {
   const bot = mineflayer.createBot({
@@ -99,7 +109,7 @@ function createBot() {
   }
 
   bot.once('spawn', () => {
-    console.log('\x1b[33m[WanderBot] Bot joined the server\x1b[0m');
+    console.log('[WanderBot] Bot joined the server');
     bot.pathfinder.setMovements(defaultMove);
 
     if (config.position.enabled) {
@@ -182,11 +192,11 @@ function createBot() {
   });
 
   bot.on('goal_reached', () => {
-    console.log(`\x1b[32m[WanderBot] Sampai di tujuan ${bot.entity.position}\x1b[0m`);
+    console.log(`[WanderBot] Sampai di tujuan ${bot.entity.position}`);
   });
 
   bot.on('death', () => {
-    console.log(`\x1b[33m[WanderBot] Bot has died. Respawned.`);
+    console.log('[WanderBot] Bot has died. Respawned.');
   });
 
   if (config.utils['auto-reconnect']) {
@@ -196,10 +206,6 @@ function createBot() {
       const totalDelay = baseDelay + randomDelay;
 
       console.log(`[AutoReconnect] Bot akan mencoba reconnect dalam ${totalDelay / 1000} detik`);
-      const channel = discordClient.channels.cache.get(config.discord.channel_id);
-      if (channel) {
-        channel.send(`⚠️ **Bot disconnected**. Akan reconnect dalam ${totalDelay / 1000} detik.`);
-      }
       setTimeout(() => {
         createBot();
       }, totalDelay);
@@ -207,20 +213,11 @@ function createBot() {
   }
 
   bot.on('kicked', reason => {
-    const msg = `[WanderBot] Kicked from server. Reason: ${reason}`;
-    console.log('\x1b[33m', msg, '\x1b[0m');
-    const channel = discordClient.channels.cache.get(config.discord.channel_id);
-    if (channel) {
-      channel.send(`❌ ${msg}`);
-    }
+    console.log(`[WanderBot] Kicked from server. Reason: \n${reason}`);
   });
 
   bot.on('error', err => {
-    console.log(`\x1b[31m[ERROR] ${err.message}`, '\x1b[0m');
-    const channel = discordClient.channels.cache.get(config.discord.channel_id);
-    if (channel) {
-      channel.send(`🚨 **ERROR**: ${err.message}`);
-    }
+    console.log(`[ERROR] ${err.message}`);
   });
 
   function sendRegister(password) {
