@@ -182,21 +182,28 @@ function createBot() {
     console.log(`\x1b[33m[WanderBot] Bot has died. Respawned.`);
   });
 
-  if (config.utils['auto-reconnect']) {
-    bot.on('end', () => {
-      const baseDelay = config.utils['auto-reconnect-delay'] || 30000;
-      const randomDelay = Math.floor(Math.random() * 15000);
-      const totalDelay = baseDelay + randomDelay;
+  // AUTO RECONNECT dengan anti-throttle
+  let lastDisconnect = 0;
+  bot.on('end', () => {
+    const now = Date.now();
+    const timeSinceLast = now - lastDisconnect;
+    lastDisconnect = now;
 
+    const baseDelay = config.utils['auto-reconnect-delay'] || 60000;
+    const randomDelay = Math.floor(Math.random() * 30000); // tambah random 0-30 detik
+    const totalDelay = baseDelay + randomDelay;
+
+    if (timeSinceLast < 60000) {
+      console.log('[AutoReconnect] Detected fast reconnect! Menunggu 2 menit agar tidak di-throttle');
+      setTimeout(() => createBot(), 120000);
+    } else {
       console.log(`[AutoReconnect] Bot akan mencoba reconnect dalam ${totalDelay / 1000} detik`);
-      setTimeout(() => {
-        createBot();
-      }, totalDelay);
-    });
-  }
+      setTimeout(() => createBot(), totalDelay);
+    }
+  });
 
   bot.on('kicked', reason => {
-    console.log('\x1b[33m', `[WanderBot] Kicked from server. Reason: \n${reason}`, '\x1b[0m');
+    console.log('\x1b[33m', `[WanderBot] Kicked from server. Reason: \n${JSON.stringify(reason, null, 2)}`, '\x1b[0m');
   });
 
   bot.on('error', err => {
