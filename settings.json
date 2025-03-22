@@ -57,8 +57,8 @@
   },
 
   "discord": {
-  "token": "c1521c547e6b5c872d7ed34e635966b214157294f0e7e7dc22eeb2bf35725a1b",
-  "channel_id": "1352950955251073108"
+    "token": "${DISCORD_TOKEN}",
+  "channel_id": ""
 }
 
 }

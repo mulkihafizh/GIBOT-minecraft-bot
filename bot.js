@@ -2,6 +2,7 @@ const mineflayer = require('mineflayer');
 const { pathfinder, Movements, goals: { GoalFollow, GoalBlock } } = require('mineflayer-pathfinder');
 const config = require('./settings.json');
 const express = require('express');
+require('dotenv').config();
 const { Client, GatewayIntentBits } = require('discord.js');
 
 const app = express();
@@ -13,14 +14,16 @@ app.listen(8000, () => {
 });
 
 const clientDiscord = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent] });
-clientDiscord.login(config.discord.token);
+clientDiscord.login(process.env.DISCORD_TOKEN);
+
+let throttlingCounter = 0;
 
 // Override console.log
 const originalLog = console.log;
 console.log = (...args) => {
   const logMessage = args.join(' ');
   if (clientDiscord && config.discord.channel_id) {
-    const channel = clientDiscord.channels.cache.get(config.discord.channel_id);
+    const channel = clientDiscord.channels.cache.get(process.env.DISCORD_CHANNEL_ID);
     if (channel) {
       channel.send('```' + logMessage + '```').catch(err => originalLog('Discord log error:', err));
     }
@@ -204,6 +207,15 @@ function createBot() {
       const baseDelay = config.utils['auto-reconnect-delay'] || 30000;
       const randomDelay = Math.floor(Math.random() * 15000);
       const totalDelay = baseDelay + randomDelay;
+
+      throttlingCounter++;
+
+      if (clientDiscord && config.discord.channel_id) {
+        const channel = clientDiscord.channels.cache.get(config.discord.channel_id);
+        if (channel) {
+          channel.send(`[Throttle Report] Bot mengalami disconnect. Total disconnect: ${throttlingCounter}`).catch(err => originalLog('Discord log error:', err));
+        }
+      }
 
       console.log(`[AutoReconnect] Bot akan mencoba reconnect dalam ${totalDelay / 1000} detik`);
       setTimeout(() => {
