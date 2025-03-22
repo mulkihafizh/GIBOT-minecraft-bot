@@ -58,7 +58,7 @@
 
   "discord": {
     "token": "${DISCORD_TOKEN}",
-  "channel_id": ""
+  "channel_id": "${DISCORD_CHANNEL_ID}"
 }
 
 }
