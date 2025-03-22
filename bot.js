@@ -190,7 +190,7 @@ function createBot() {
       bot.chat('Oke, auto-search dimatikan.');
     } else if (msg.includes('on') || msg.includes('nyalakan')) {
       autoMineEnabled = true;
-      bot.chat('Oke, auto-search dinyalakan lagi.');
+      bot.chat('Oke, auto-search dinyalakan lagi..');
     }
   });
 
