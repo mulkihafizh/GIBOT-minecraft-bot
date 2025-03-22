@@ -4,11 +4,9 @@ const config = require('./settings.json');
 const express = require('express');
 
 const app = express();
-
 app.get('/', (req, res) => {
   res.send('Bot has arrived');
 });
-
 app.listen(8000, () => {
   console.log('Server started');
 });
@@ -32,7 +30,6 @@ function createBot() {
 
   function wanderAround() {
     if (!isWandering) return;
-
     const radius = 10 + Math.floor(Math.random() * 5);
     const angle = Math.random() * 2 * Math.PI;
     const x = bot.entity.position.x + Math.floor(Math.cos(angle) * radius);
@@ -43,7 +40,7 @@ function createBot() {
     bot.pathfinder.setGoal(new GoalBlock(x, y, z));
 
     const delay = 20 + Math.floor(Math.random() * 15);
-    console.log(`[Wander] Jalan ke (${x.toFixed(1)}, ${y.toFixed(1)}, ${z.toFixed(1)}) dalam radius ${radius} blok. Delay ${delay} detik`);
+    console.log(`[WanderBot] Jalan ke (${x.toFixed(1)}, ${y.toFixed(1)}, ${z.toFixed(1)}) dalam radius ${radius} blok. Delay ${delay} detik`);
 
     setTimeout(() => {
       if (isWandering && !bot.pathfinder.isMoving()) {
@@ -63,8 +60,15 @@ function createBot() {
 
         bot.pathfinder.setMovements(defaultMove);
         bot.pathfinder.setGoal(new GoalBlock(x, y, z));
-        console.log(`[Anti-AFK] Bergerak ke (${x.toFixed(1)}, ${y.toFixed(1)}, ${z.toFixed(1)})`);
+        console.log(`[AntiAFKBot] Bergerak ke (${x.toFixed(1)}, ${y.toFixed(1)}, ${z.toFixed(1)})`);
       }, config.utils['anti-afk'].interval * 1000 || 60000);
+
+      setInterval(() => {
+        bot.swingArm('right');
+        bot.setControlState('jump', true);
+        setTimeout(() => bot.setControlState('jump', false), 500);
+        console.log('[AntiKick] Swing arm + lompat agar tidak dianggap AFK oleh server');
+      }, (config.utils['anti-afk'].interval * 1000 || 60000) * 3);
     }
   }
 
@@ -88,7 +92,7 @@ function createBot() {
   }
 
   bot.once('spawn', () => {
-    console.log('\x1b[33m[AfkBot] Bot joined the server', '\x1b[0m');
+    console.log('\x1b[33m[WanderBot] Bot joined the server\x1b[0m');
     bot.pathfinder.setMovements(defaultMove);
 
     if (config.position.enabled) {
@@ -106,7 +110,7 @@ function createBot() {
         const radius = config['anti-lag'].clear_radius;
         if (drops.some(drop => bot.entity.position.distanceTo(drop.position) <= radius)) {
           bot.chat(`/kill @e[type=item,distance=..${radius}]`);
-          console.log(`[Anti-Lag] Cleared dropped items within ${radius} blocks.`);
+          console.log(`[AntiLagBot] Cleared dropped items within ${radius} blocks.`);
         }
       }, config['anti-lag'].clear_interval * 1000);
     }
@@ -127,18 +131,6 @@ function createBot() {
       }, delay);
     }
   });
-
-  bot.on('end', () => {
-    setTimeout(() => {
-      createBot();
-    }, config.utils['auto-reconnect-delay']);
-});
-const delay = 60000 + Math.floor(Math.random() * 20000); // 60-80 detik
-setTimeout(() => {
-  createBot();
-}, delay);
-
-
 
   bot.on('chat', (username, message) => {
     if (username === bot.username) return;
@@ -183,23 +175,28 @@ setTimeout(() => {
   });
 
   bot.on('goal_reached', () => {
-    console.log(`\x1b[32m[AfkBot] Sampai di tujuan ${bot.entity.position}\x1b[0m`);
+    console.log(`\x1b[32m[WanderBot] Sampai di tujuan ${bot.entity.position}\x1b[0m`);
   });
 
   bot.on('death', () => {
-    console.log(`\x1b[33m[AfkBot] Bot has died. Respawned.`);
+    console.log(`\x1b[33m[WanderBot] Bot has died. Respawned.`);
   });
 
   if (config.utils['auto-reconnect']) {
     bot.on('end', () => {
+      const baseDelay = config.utils['auto-reconnect-delay'] || 30000;
+      const randomDelay = Math.floor(Math.random() * 15000); // random tambahan 0-15 detik
+      const totalDelay = baseDelay + randomDelay;
+
+      console.log(`[AutoReconnect] Bot akan mencoba reconnect dalam ${totalDelay / 1000} detik`);
       setTimeout(() => {
         createBot();
-      }, config.utils['auto-reconect-delay']);
+      }, totalDelay);
     });
   }
 
   bot.on('kicked', reason => {
-    console.log('\x1b[33m', `[AfkBot] Kicked from server. Reason: \n${reason}`, '\x1b[0m');
+    console.log('\x1b[33m', `[WanderBot] Kicked from server. Reason: \n${reason}`, '\x1b[0m');
   });
 
   bot.on('error', err => {
