@@ -128,6 +128,18 @@ function createBot() {
     }
   });
 
+  bot.on('end', () => {
+    setTimeout(() => {
+      createBot();
+    }, config.utils['auto-reconnect-delay']);
+});
+const delay = 60000 + Math.floor(Math.random() * 20000); // 60-80 detik
+setTimeout(() => {
+  createBot();
+}, delay);
+
+
+
   bot.on('chat', (username, message) => {
     if (username === bot.username) return;
     const msg = message.toLowerCase();
