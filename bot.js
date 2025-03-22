@@ -5,28 +5,33 @@ const express = require('express');
 require('dotenv').config();
 const { Client, GatewayIntentBits } = require('discord.js');
 
+// Web server
 const app = express();
-app.get('/', (req, res) => {
-  res.send('Bot has arrived');
-});
-app.listen(8000, () => {
-  console.log('Server started');
-});
+app.get('/', (req, res) => res.send('Bot has arrived'));
+app.listen(8000, () => console.log('[Express] Server started on port 8000'));
 
+// Discord Client
 const clientDiscord = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent] });
-clientDiscord.login(process.env.DISCORD_TOKEN);
 
-let throttlingCounter = 0;
+let discordChannel;
+clientDiscord.once('ready', () => {
+  console.log(`[Discord] Bot Discord siap sebagai ${clientDiscord.user.tag}`);
+
+  discordChannel = clientDiscord.channels.cache.get(process.env.DISCORD_CHANNEL_ID);
+  if (!discordChannel) {
+    originalLog('Channel ID tidak ditemukan. Pastikan ID channel sudah benar.');
+  } else {
+    originalLog('Channel Discord ditemukan, siap kirim log.');
+  }
+});
+clientDiscord.login(process.env.DISCORD_TOKEN);
 
 // Override console.log
 const originalLog = console.log;
 console.log = (...args) => {
   const logMessage = args.join(' ');
-  if (clientDiscord && config.discord.channel_id) {
-    const channel = clientDiscord.channels.cache.get(process.env.DISCORD_CHANNEL_ID);
-    if (channel) {
-      channel.send('```' + logMessage + '```').catch(err => originalLog('Discord log error:', err));
-    }
+  if (discordChannel) {
+    discordChannel.send('```' + logMessage + '```').catch(err => originalLog('Discord log error:', err));
   }
   originalLog(...args);
 };
@@ -48,6 +53,7 @@ function createBot() {
   let isWandering = true;
   let autoMineEnabled = config.utils['auto-mine']?.enabled || false;
 
+  // Fitur wander
   function wanderAround() {
     if (!isWandering) return;
     const radius = 10 + Math.floor(Math.random() * 5);
@@ -63,12 +69,11 @@ function createBot() {
     console.log(`[WanderBot] Jalan ke (${x.toFixed(1)}, ${y.toFixed(1)}, ${z.toFixed(1)}) dalam radius ${radius} blok. Delay ${delay} detik`);
 
     setTimeout(() => {
-      if (isWandering && !bot.pathfinder.isMoving()) {
-        wanderAround();
-      }
+      if (isWandering && !bot.pathfinder.isMoving()) wanderAround();
     }, delay * 1000);
   }
 
+  // Anti AFK
   function startAntiAfk() {
     if (config.utils['anti-afk'].enabled) {
       setInterval(() => {
@@ -92,16 +97,13 @@ function createBot() {
     }
   }
 
+  // Auto cari diamond
   async function locateDiamonds() {
     if (!autoMineEnabled) return;
     const diamondId = mcData.blocksByName['diamond_ore'].id;
-
     bot.chat('Mencari diamond...');
 
-    const block = bot.findBlock({
-      matching: diamondId,
-      maxDistance: 32,
-    });
+    const block = bot.findBlock({ matching: diamondId, maxDistance: 32 });
 
     if (block) {
       bot.chat(`WEH ADA NIH DIAMOND : (${block.position.x}, ${block.position.y}, ${block.position.z})!`);
@@ -123,6 +125,7 @@ function createBot() {
 
     startAntiAfk();
 
+    // Anti-Lag
     if (config['anti-lag'] && config['anti-lag'].enabled) {
       console.log('[INFO] Anti-Lag module started');
       setInterval(() => {
@@ -135,11 +138,13 @@ function createBot() {
       }, config['anti-lag'].clear_interval * 1000);
     }
 
+    // Auto-auth
     if (config.utils['auto-auth'].enabled) {
       const password = config.utils['auto-auth'].password;
       sendRegister(password).then(() => sendLogin(password)).catch(console.error);
     }
 
+    // Auto chat
     if (config.utils['chat-messages'].enabled) {
       const messages = config.utils['chat-messages']['messages'];
       const delay = config.utils['chat-messages']['repeat-delay'] * 1000;
@@ -152,6 +157,7 @@ function createBot() {
     }
   });
 
+  // Chat Handler
   bot.on('chat', (username, message) => {
     if (username === bot.username) return;
     const msg = message.toLowerCase();
@@ -190,48 +196,28 @@ function createBot() {
       bot.chat('Oke, auto-search dimatikan.');
     } else if (msg.includes('on') || msg.includes('nyalakan')) {
       autoMineEnabled = true;
-      bot.chat('Oke, auto-search dinyalakan lagi.');
+      bot.chat('Oke, auto-search dinyalakan lagi..');
     }
   });
 
-  bot.on('goal_reached', () => {
-    console.log(`[WanderBot] Sampai di tujuan ${bot.entity.position}`);
-  });
+  // Event lainnya
+  bot.on('goal_reached', () => console.log(`[WanderBot] Sampai di tujuan ${bot.entity.position}`));
+  bot.on('death', () => console.log('[WanderBot] Bot has died. Respawned.'));
+  bot.on('kicked', reason => console.log(`[WanderBot] Kicked from server. Reason: \n${reason}`));
+  bot.on('error', err => console.log(`[ERROR] ${err.message}`));
 
-  bot.on('death', () => {
-    console.log('[WanderBot] Bot has died. Respawned.');
-  });
-
+  // Auto Reconnect
   if (config.utils['auto-reconnect']) {
     bot.on('end', () => {
       const baseDelay = config.utils['auto-reconnect-delay'] || 30000;
       const randomDelay = Math.floor(Math.random() * 15000);
       const totalDelay = baseDelay + randomDelay;
-
-      throttlingCounter++;
-
-      if (clientDiscord && config.discord.channel_id) {
-        const channel = clientDiscord.channels.cache.get(config.discord.channel_id);
-        if (channel) {
-          channel.send(`[Throttle Report] Bot mengalami disconnect. Total disconnect: ${throttlingCounter}`).catch(err => originalLog('Discord log error:', err));
-        }
-      }
-
       console.log(`[AutoReconnect] Bot akan mencoba reconnect dalam ${totalDelay / 1000} detik`);
-      setTimeout(() => {
-        createBot();
-      }, totalDelay);
+      setTimeout(() => createBot(), totalDelay);
     });
   }
 
-  bot.on('kicked', reason => {
-    console.log(`[WanderBot] Kicked from server. Reason: \n${reason}`);
-  });
-
-  bot.on('error', err => {
-    console.log(`[ERROR] ${err.message}`);
-  });
-
+  // Auto-register/login
   function sendRegister(password) {
     return new Promise((resolve, reject) => {
       bot.chat(`/register ${password} ${password}`);
