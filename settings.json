@@ -1,16 +1,26 @@
 {
+"anti-lag": {
+  "enabled": true,
+  "clear_radius": 5,
+  "clear_interval": 30,
+  "tps_threshold": 15,
+  "critical_tps": 8,
+  "reconnect_delay": 60
+},
+
   "bot-account": {
-    "username": "Mak55er",
+    "username": "gibot", 
     "password": "",
-    "type": "mojang"
+    "type": "offline"
   },
+  
 
   "server": {
-    "ip": "makser.aternos.me",
-    "port": 51498,
-    "version": "1.21.1"
+    "ip": "ahai.aternos.me", 
+    "port": 21030,   
+    "version": "1.21.4"   
   },
-
+  
   "position": {
     "enabled": false,
     "x": 0,
@@ -21,27 +31,27 @@
   "utils": {
     "auto-auth": {
       "enabled": false,
-      "password": "12345678"
+      "password": ""
     },
 
     "anti-afk": {
       "enabled": true,
-      "sneak": false
+      "sneak": true
     },
 
     "chat-messages": {
       "enabled": false,
-      "repeat": true,
+      "repeat": false,
       "repeat-delay": 60,
       "messages": [
-        "I'm a regular player ",
-        "My owner is Mak5er ",
-        "I want be alone "
+        "jan lupa turu"
       ]
     },
+    
 
     "chat-log": true,
     "auto-reconnect": true,
-    "auto-reconnect-delay": 5000
+    "auto-recconect-delay": 5000
   }
+  
 }
