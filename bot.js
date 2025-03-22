@@ -185,7 +185,7 @@ function createBot() {
   if (config.utils['auto-reconnect']) {
     bot.on('end', () => {
       const baseDelay = config.utils['auto-reconnect-delay'] || 30000;
-      const randomDelay = Math.floor(Math.random() * 15000); // random tambahan 0-15 detik
+      const randomDelay = Math.floor(Math.random() * 15000);
       const totalDelay = baseDelay + randomDelay;
 
       console.log(`[AutoReconnect] Bot akan mencoba reconnect dalam ${totalDelay / 1000} detik`);
