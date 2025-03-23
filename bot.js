@@ -2,8 +2,8 @@ const mineflayer = require('mineflayer');
 const { pathfinder, Movements, goals: { GoalFollow, GoalBlock } } = require('mineflayer-pathfinder');
 const config = require('./settings.json');
 const express = require('express');
-const { GoalBlock } = require('mineflayer-pathfinder').goals;
 const Vec3 = require('vec3');
+
 
 require('dotenv').config();
 const { Client, GatewayIntentBits } = require('discord.js');
