@@ -64,8 +64,9 @@ function createBot() {
     bot.pathfinder.setMovements(defaultMove);
     bot.pathfinder.setGoal(new GoalBlock(x, y, z));
 
-    const delay = 20 + Math.floor(Math.random() * 15);
+    const delay = 5 + Math.floor(Math.random() * 3); // Delay 5-7 detik
     console.log(`[WanderBot] Jalan ke (${x.toFixed(1)}, ${y.toFixed(1)}, ${z.toFixed(1)}) dalam radius ${radius} blok. Delay ${delay} detik`);
+
 
     setTimeout(() => {
       if (isWandering && !bot.pathfinder.isMoving()) wanderAround();
