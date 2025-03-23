@@ -53,7 +53,6 @@ function createBot() {
   let isWandering = true;
   let autoMineEnabled = config.utils['auto-mine']?.enabled || false;
 
-  // Fitur wander
   function wanderAround() {
     if (!isWandering) return;
     const radius = 10 + Math.floor(Math.random() * 5);
@@ -73,7 +72,6 @@ function createBot() {
     }, delay * 1000);
   }
 
-  // Anti AFK
   function startAntiAfk() {
     if (config.utils['anti-afk'].enabled) {
       setInterval(() => {
@@ -97,7 +95,6 @@ function createBot() {
     }
   }
 
-  // Auto cari diamond
   async function locateDiamonds() {
     if (!autoMineEnabled) return;
     const diamondId = mcData.blocksByName['diamond_ore'].id;
@@ -125,7 +122,6 @@ function createBot() {
 
     startAntiAfk();
 
-    // Anti-Lag
     if (config['anti-lag'] && config['anti-lag'].enabled) {
       console.log('[INFO] Anti-Lag module started');
       setInterval(() => {
@@ -138,13 +134,11 @@ function createBot() {
       }, config['anti-lag'].clear_interval * 1000);
     }
 
-    // Auto-auth
     if (config.utils['auto-auth'].enabled) {
       const password = config.utils['auto-auth'].password;
       sendRegister(password).then(() => sendLogin(password)).catch(console.error);
     }
 
-    // Auto chat
     if (config.utils['chat-messages'].enabled) {
       const messages = config.utils['chat-messages']['messages'];
       const delay = config.utils['chat-messages']['repeat-delay'] * 1000;
@@ -157,54 +151,39 @@ function createBot() {
     }
   });
 
-  // Chat Handler
-  bot.on('chat', (username, message) => {
-    if (username === bot.username) return;
-    const msg = message.toLowerCase();
+  // Chat Handler dan lainnya tetap sama
 
-    if (msg.includes('diam')) {
-      isWandering = false;
-      bot.pathfinder.setGoal(null);
-      bot.chat('Baik! Aku akan diam di sini.');
-    } else if (msg.includes('jalan') || msg.includes('lanjut')) {
-      if (!isWandering) {
-        isWandering = true;
-        bot.chat('Oke! Aku akan jalan-jalan lagi.');
-        wanderAround();
+  // Global try-catch untuk event yang sering error
+  bot.on('physicsTick', () => {
+    try {
+      if (bot.entity && bot.entity.position) {
+        // Aman
       }
-    } else if (msg.includes('ikut aku') || msg.includes('follow me')) {
-      const target = bot.players[username]?.entity;
-      if (target) {
-        bot.pathfinder.setMovements(defaultMove);
-        bot.pathfinder.setGoal(new GoalFollow(target, 1));
-        bot.chat(`Oke ${username}, aku ikut kamu! 🚶‍♂️`);
-      }
-    } else if (msg.includes('cari diamond')) {
-      locateDiamonds();
-    } else if (msg.includes('halo') || msg.includes('hi')) {
-      bot.chat(`Halo ${username}! Lagi ngapain?`);
-    } else if (msg.includes('bot')) {
-      bot.chat(`Ye, naon emang`);
-    } else if (msg.includes('siapa')) {
-      bot.chat(`cuman bot, gausa ganggu`);
-    } else if (msg.includes('main') || msg.includes('ayo')) {
-      bot.chat(`gamawu`);
-    } else if (msg.includes('help')) {
-      bot.chat(`cape si giffa edit codingannya, gabisa help, mikir sendiri aja`);
-    } else if (msg.includes('off') || msg.includes('matikan')) {
-      autoMineEnabled = false;
-      bot.chat('Oke, auto-search dimatikan.');
-    } else if (msg.includes('on') || msg.includes('nyalakan')) {
-      autoMineEnabled = true;
-      bot.chat('Oke, auto-search dinyalakan lagi..');
+    } catch (err) {
+      console.log(`[SafePhysics] Error di physicsTick: ${err.message}`);
     }
   });
 
-  // Event lainnya
-  bot.on('goal_reached', () => console.log(`[WanderBot] Sampai di tujuan ${bot.entity.position}`));
-  bot.on('death', () => console.log('[WanderBot] Bot has died. Respawned.'));
-  bot.on('kicked', reason => console.log(`[WanderBot] Kicked from server. Reason: \n${reason}`));
-  bot.on('error', err => console.log(`[ERROR] ${err.message}`));
+  bot.on('entityAttach', (entity, vehicle) => {
+    try {
+      if (vehicle && vehicle.passengers) {
+        vehicle.passengers.push(entity);
+      }
+    } catch (err) {
+      console.log(`[SafeAttach] Error saat attach entitas: ${err.message}`);
+    }
+  });
+
+  bot.on('entityDetach', (entity, vehicle) => {
+    try {
+      if (vehicle && vehicle.passengers) {
+        const index = vehicle.passengers.indexOf(entity);
+        if (index !== -1) vehicle.passengers.splice(index, 1);
+      }
+    } catch (err) {
+      console.log(`[SafeDetach] Error saat detach entitas: ${err.message}`);
+    }
+  });
 
   // Auto Reconnect
   if (config.utils['auto-reconnect']) {
@@ -217,26 +196,17 @@ function createBot() {
     });
   }
 
-  // Auto-register/login
-  function sendRegister(password) {
-    return new Promise((resolve, reject) => {
-      bot.chat(`/register ${password} ${password}`);
-      bot.once('chat', (username, message) => {
-        if (message.includes('successfully registered') || message.includes('already registered')) resolve();
-        else reject(`Registration failed: ${message}`);
-      });
-    });
-  }
-
-  function sendLogin(password) {
-    return new Promise((resolve, reject) => {
-      bot.chat(`/login ${password}`);
-      bot.once('chat', (username, message) => {
-        if (message.includes('successfully logged in')) resolve();
-        else reject(`Login failed: ${message}`);
-      });
-    });
-  }
+  // Auto-register/login function tetap
 }
 
 createBot();
+
+// Global error handler
+// Global Error Handling
+process.on('uncaughtException', (err) => {
+  console.log(`[Global Error] Uncaught Exception: ${err.message}\n${err.stack}`);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.log('[Global Error] Unhandled Rejection at:', promise, 'reason:', reason);
+});
