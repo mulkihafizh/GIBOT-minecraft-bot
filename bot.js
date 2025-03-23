@@ -30,160 +30,92 @@ clientDiscord.once('ready', () => {
 });
 clientDiscord.login(process.env.DISCORD_TOKEN);
 
-clientDiscord.on('messageCreate', async (message) => {
-  if (message.channel.id !== process.env.DISCORD_CHANNEL_ID || message.author.bot) return;
 
-  const args = message.content.split(' ');
-  const cmd = args.shift().toLowerCase();
+// Override console.log
+const originalLog = console.log;
+console.log = (...args) => {
+  const logMessage = args.join(' ');
+  if (discordChannel) {
+    discordChannel.send('```' + logMessage + '```').catch(err => originalLog('Discord log error:', err));
+  }
+  originalLog(...args);
+};
+function createBot() {
+  const bot = mineflayer.createBot({
+    username: config['bot-account']['username'],
+    password: config['bot-account']['password'],
+    auth: config['bot-account']['type'],
+    host: config.server.ip,
+    port: config.server.port,
+    version: config.server.version,
+  });
 
-  if (cmd === '.say') {
-    const text = args.join(' ');
-    bot.chat(text);
-    message.reply(`✅ Mengirim pesan: ${text}`);
+  bot.loadPlugin(pathfinder);
+  const mcData = require('minecraft-data')(bot.version);
+  const defaultMove = new Movements(bot, mcData);
+
+  let guardEnabled = false;
+  let isWandering = true;
+  let autoMineEnabled = config.utils['auto-mine']?.enabled || false;
+
+  function findNearestHostile(bot) {
+    const mobs = bot.nearestEntity(entity => {
+      return entity.type === 'mob' &&
+             entity.position &&
+             entity.mobType &&
+             ['Zombie', 'Skeleton', 'Creeper', 'Spider', 'Enderman', 'Pillager'].includes(entity.mobType) &&
+             bot.entity.position.distanceTo(entity.position) < 16;
+    });
+    return mobs;
   }
 
-  if (cmd === '.locate' && args[0] === 'diamond') {
-    locateDiamonds();
-    message.reply('🔍 Mencari diamond...');
-  }
+  function wanderAround() {
+    if (!isWandering) return;
+    const radius = 10 + Math.floor(Math.random() * 5);
+    const angle = Math.random() * 2 * Math.PI;
+    const x = bot.entity.position.x + Math.floor(Math.cos(angle) * radius);
+    const z = bot.entity.position.z + Math.floor(Math.sin(angle) * radius);
+    const y = bot.entity.position.y;
 
-  if (cmd === '.start' && args[0] === 'wander') {
-    isWandering = true;
-    wanderAround();
-    message.reply('🟢 Bot mulai jalan-jalan');
-  }
+    bot.pathfinder.setMovements(defaultMove);
+    bot.pathfinder.setGoal(new GoalBlock(x, y, z));
 
-  if (cmd === '.stop' && args[0] === 'wander') {
-    isWandering = false;
-    bot.pathfinder.setGoal(null);
-    message.reply('🔴 Bot berhenti jalan-jalan');
-  }
+    const delay = 5 + Math.floor(Math.random() * 3);
+    console.log(`[WanderBot] Jalan ke (${x.toFixed(1)}, ${y.toFixed(1)}, ${z.toFixed(1)}) dalam radius ${radius} blok. Delay ${delay} detik`);
 
-  if (cmd === '.follow' && args[0]) {
-    const targetPlayer = args[0];
-    const target = bot.players[targetPlayer]?.entity;
-    if (target) {
-      bot.pathfinder.setMovements(defaultMove);
-      bot.pathfinder.setGoal(new GoalFollow(target, 1));
-      bot.chat(`Oke ${targetPlayer}, aku ikut kamu!`);
-      message.reply(`👣 Mengikuti ${targetPlayer}`);
-    } else {
-      message.reply('⚠️ Pemain tidak ditemukan.');
+    setTimeout(() => {
+      if (isWandering && !bot.pathfinder.isMoving()) wanderAround();
+    }, delay * 1000);
+  }
+function startGuarding(bot) {
+  const guardArea = bot.entity.position.clone(); // Misal guard di posisi saat ini
+  bot.on('physicTick', () => {
+    const mob = findNearestHostile(bot);
+    if (mob) {
+      bot.lookAt(mob.position.offset(0, mob.height, 0));
+      bot.attack(mob);
     }
-  }
+  });
 
-  if (cmd === '.stop' && args[0] === 'follow') {
-    bot.pathfinder.setGoal(null);
-    message.reply('🛑 Bot berhenti mengikuti pemain.');
-  }
+  bot.chat('Mode guard diaktifkan.');
+}
+function startGuarding(bot) {
+  const guardArea = bot.entity.position.clone(); // Misal guard di posisi saat ini
+  bot.on('physicTick', () => {
+    const mob = findNearestHostile(bot);
+    if (mob) {
+      bot.lookAt(mob.position.offset(0, mob.height, 0));
+      bot.attack(mob);
+    }
+  });
 
-  if (cmd === '.jump') {
-    bot.setControlState('jump', true);
-    setTimeout(() => bot.setControlState('jump', false), 500);
-    message.reply('⏫ Bot melompat');
-  }
+  bot.chat('Mode guard diaktifkan.');
+}
+function stopGuarding(bot) {
+  bot.removeAllListeners('physicTick');
+  bot.chat('Mode guard dimatikan.');
+}
 
-  if (cmd === '.kill' && args[0] === 'drops') {
-    const radius = config['anti-lag']?.clear_radius || 10;
-    bot.chat(`/kill @e[type=item,distance=..${radius}]`);
-    message.reply(`🧹 Membersihkan drop item di radius ${radius} blok`);
-  }
-
-  if (cmd === '.coords') {
-    const pos = bot.entity.position;
-    message.reply(`📍 Koordinat Bot: X: ${pos.x.toFixed(1)}, Y: ${pos.y.toFixed(1)}, Z: ${pos.z.toFixed(1)}`);
-  }
-
-  if (cmd === '.tp' && args.length === 3) {
-    const [x, y, z] = args.map(Number);
-    if (!isNaN(x) && !isNaN(y) && !isNaN(z)) {
-      bot.pathfinder.setMovements(defaultMove);
-      bot.pathfinder.setGoal(new GoalBlock(x, y, z));
-      message.reply(`🛫 Teleport ke X: ${x}, Y: ${y}, Z: ${z}`);
-    } else {
-      message.reply('⚠️ Koordinat tidak valid.');
-    }
-  }
-  if (cmd === '.guard' && (args[0] === 'on' || args[0] === 'off')) {
-    guardEnabled = args[0] === 'on';
-    if (guardEnabled) {
-      bot.chat('Mode guard diaktifkan. Siap serang mobs hostile.');
-      message.reply('🛡️ Mode guard ON.');
-      startGuarding();
-    } else {
-      guardEnabled = false;
-      message.reply('⚪ Mode guard OFF.');
-    }
-  }
-  
-  if (cmd === '.inventory') {
-    const items = bot.inventory.items().map(item => `${item.name} x${item.count}`).join('\n') || 'Inventory kosong.';
-    message.reply(`🎒 Inventory Bot:\n\`\`\`${items}\`\`\``);
-  }
-  
-  if (cmd === '.drop' && args.length >= 2) {
-    const itemName = args[0];
-    const amount = parseInt(args[1]);
-    if (isNaN(amount) || amount <= 0) {
-      return message.reply('⚠️ Jumlah harus berupa angka yang valid.');
-    }
-    const item = bot.inventory.items().find(i => i.name === itemName);
-    if (item) {
-      bot.toss(item.type, null, amount, err => {
-        if (err) return message.reply('❌ Gagal drop item.');
-        message.reply(`📦 Drop ${amount} ${itemName}`);
-      });
-    } else {
-      message.reply('⚠️ Item tidak ditemukan di inventory.');
-    }
-  }
-  
-  if (cmd === '.eat') {
-    const food = bot.inventory.items().find(item => item.name.includes('beef') || item.name.includes('bread') || item.name.includes('porkchop') || item.name.includes('apple'));
-    if (food) {
-      bot.equip(food, 'hand', () => {
-        bot.consume();
-        message.reply(`🍽️ Makan ${food.name}`);
-      });
-    } else {
-      message.reply('⚠️ Tidak ada makanan di inventory.');
-    }
-  }
-  
-  if (cmd === '.health') {
-    const hp = bot.health;
-    const food = bot.food;
-    message.reply(`❤️ HP: ${hp.toFixed(1)}/20 | 🍗 Hunger: ${food}/20`);
-  }
-  
-  if (cmd === '.tunnel' && args[0]) {
-    const length = parseInt(args[0]);
-    if (isNaN(length) || length <= 0) {
-      return message.reply('⚠️ Panjang tunnel harus berupa angka.');
-    }
-    startTunnel(length);
-    message.reply(`⛏️ Mulai gali tunnel sepanjang ${length} blok.`);
-  }
-  
-  if (cmd === '.chop' && args[0] === 'tree') {
-    startChopTree();
-    message.reply('🌳 Mulai cari dan tebang pohon.');
-  }
-  
-  if (cmd === '.status') {
-    const pos = bot.entity.position;
-    const statusMsg = `
-  🟢 Status Bot:
-  - Wander: ${isWandering ? 'ON' : 'OFF'}
-  - Guard: ${guardEnabled ? 'ON' : 'OFF'}
-  - Auto-Mine: ${autoMineEnabled ? 'ON' : 'OFF'}
-  - Lokasi: X: ${pos.x.toFixed(1)}, Y: ${pos.y.toFixed(1)}, Z: ${pos.z.toFixed(1)}
-  - Mob Terdekat: ${findNearestHostile() || 'Tidak ada mobs hostile terdekat.'}
-    `;
-    message.reply(statusMsg);
-  }  
-});
-;
 function startTunnel(length) {
   const pos = bot.entity.position.clone();
   let blocksMined = 0;
@@ -253,52 +185,167 @@ function startChopTree() {
   });
 };
 
-// Override console.log
-const originalLog = console.log;
-console.log = (...args) => {
-  const logMessage = args.join(' ');
-  if (discordChannel) {
-    discordChannel.send('```' + logMessage + '```').catch(err => originalLog('Discord log error:', err));
-  }
-  originalLog(...args);
-};
+  clientDiscord.on('messageCreate', async (message) => {
+    if (message.channel.id !== process.env.DISCORD_CHANNEL_ID || message.author.bot) return;
 
-function createBot() {
-  const bot = mineflayer.createBot({
-    username: config['bot-account']['username'],
-    password: config['bot-account']['password'],
-    auth: config['bot-account']['type'],
-    host: config.server.ip,
-    port: config.server.port,
-    version: config.server.version,
+    const args = message.content.split(' ');
+    const cmd = args.shift().toLowerCase();
+
+    if (cmd === '.say') {
+      const text = args.join(' ');
+      bot.chat(text);
+      return message.reply(`✅ Mengirim pesan: ${text}`);
+    }
+
+    if (cmd === '.locate' && args[0] === 'diamond') {
+      locateDiamonds();
+      return message.reply('🔍 Mencari diamond...');
+    }
+
+    if (cmd === '.start' && args[0] === 'wander') {
+      isWandering = true;
+      wanderAround();
+      return message.reply('🟢 Bot mulai jalan-jalan');
+    }
+
+    if (cmd === '.stop' && args[0] === 'wander') {
+      isWandering = false;
+      bot.pathfinder.setGoal(null);
+      return message.reply('🔴 Bot berhenti jalan-jalan');
+    }
+
+    if (cmd === '.follow' && args[0]) {
+      const targetPlayer = args[0];
+      const target = bot.players[targetPlayer]?.entity;
+      if (target) {
+        bot.pathfinder.setMovements(defaultMove);
+        bot.pathfinder.setGoal(new GoalFollow(target, 1));
+        bot.chat(`Oke ${targetPlayer}, aku ikut kamu!`);
+        return message.reply(`👣 Mengikuti ${targetPlayer}`);
+      } else {
+        return message.reply('⚠️ Pemain tidak ditemukan.');
+      }
+    }
+
+    if (cmd === '.stop' && args[0] === 'follow') {
+      bot.pathfinder.setGoal(null);
+      return message.reply('🛑 Bot berhenti mengikuti pemain.');
+    }
+
+    if (cmd === '.jump') {
+      bot.setControlState('jump', true);
+      setTimeout(() => bot.setControlState('jump', false), 500);
+      return message.reply('⏫ Bot melompat');
+    }
+
+    if (cmd === '.kill' && args[0] === 'drops') {
+      const radius = config['anti-lag']?.clear_radius || 10;
+      bot.chat(`/kill @e[type=item,distance=..${radius}]`);
+      return message.reply(`🧹 Membersihkan drop item di radius ${radius} blok`);
+    }
+
+    if (cmd === '.coords') {
+      const pos = bot.entity.position;
+      return message.reply(`📍 Koordinat Bot: X: ${pos.x.toFixed(1)}, Y: ${pos.y.toFixed(1)}, Z: ${pos.z.toFixed(1)}`);
+    }
+
+    if (cmd === '.tp' && args.length === 3) {
+      const [x, y, z] = args.map(Number);
+      if (!isNaN(x) && !isNaN(y) && !isNaN(z)) {
+        bot.pathfinder.setMovements(defaultMove);
+        bot.pathfinder.setGoal(new GoalBlock(x, y, z));
+        return message.reply(`🛫 Teleport ke X: ${x}, Y: ${y}, Z: ${z}`);
+      } else {
+        return message.reply('⚠️ Koordinat tidak valid.');
+      }
+    }
+
+    if (cmd === '.guard' && (args[0] === 'on' || args[0] === 'off')) {
+      guardEnabled = args[0] === 'on';
+      if (guardEnabled) {
+        bot.chat('Mode guard diaktifkan. Siap serang mobs hostile.');
+        startGuarding(bot);
+        return message.reply('🛡️ Mode guard ON.');
+      } else {
+        return message.reply('⚪ Mode guard OFF.');
+      }
+    }
+
+    if (cmd === '.inventory') {
+      const items = bot.inventory.items().map(item => `${item.name} x${item.count}`).join('\n') || 'Inventory kosong.';
+      return message.reply(`🎒 Inventory Bot:\n\`\`\`${items}\`\`\``);
+    }
+
+    if (cmd === '.drop' && args.length >= 2) {
+      const itemName = args[0];
+      const amount = parseInt(args[1]);
+      if (isNaN(amount) || amount <= 0) {
+        return message.reply('⚠️ Jumlah harus berupa angka yang valid.');
+      }
+      const item = bot.inventory.items().find(i => i.name === itemName);
+      if (item) {
+        bot.toss(item.type, null, amount, err => {
+          if (err) return message.reply('❌ Gagal drop item.');
+          return message.reply(`📦 Drop ${amount} ${itemName}`);
+        });
+      } else {
+        return message.reply('⚠️ Item tidak ditemukan di inventory.');
+      }
+    }
+
+    if (cmd === '.eat') {
+      const food = bot.inventory.items().find(item => item.name.includes('beef') || item.name.includes('bread') || item.name.includes('porkchop') || item.name.includes('apple'));
+      if (food) {
+        bot.equip(food, 'hand', () => {
+          bot.consume();
+          return message.reply(`🍽️ Makan ${food.name}`);
+        });
+      } else {
+        return message.reply('⚠️ Tidak ada makanan di inventory.');
+      }
+    }
+
+    if (cmd === '.health') {
+      const hp = bot.health;
+      const food = bot.food;
+      return message.reply(`❤️ HP: ${hp.toFixed(1)}/20 | 🍗 Hunger: ${food}/20`);
+    }
+
+    if (cmd === '.tunnel' && args[0]) {
+      const length = parseInt(args[0]);
+      if (isNaN(length) || length <= 0) {
+        return message.reply('⚠️ Panjang tunnel harus berupa angka.');
+      }
+      startTunnel(length);
+      return message.reply(`⛏️ Mulai gali tunnel sepanjang ${length} blok.`);
+    }
+
+    if (cmd === '.chop' && args[0] === 'tree') {
+      startChopTree();
+      return message.reply('🌳 Mulai cari dan tebang pohon.');
+    }
+
+    if (cmd === '.status') {
+      const pos = bot.entity.position;
+      const nearestMob = findNearestHostile(bot);
+      const mobInfo = nearestMob 
+        ? `${nearestMob.mobType} di X:${nearestMob.position.x.toFixed(1)} Y:${nearestMob.position.y.toFixed(1)} Z:${nearestMob.position.z.toFixed(1)}`
+        : 'Tidak ada mobs hostile terdekat.';
+        
+      const statusMsg = `
+    🟢 Status Bot:
+    - Wander: ${isWandering ? 'ON' : 'OFF'}
+    - Guard: ${guardEnabled ? 'ON' : 'OFF'}
+    - Auto-Mine: ${autoMineEnabled ? 'ON' : 'OFF'}
+    - Lokasi: X: ${pos.x.toFixed(1)}, Y: ${pos.y.toFixed(1)}, Z: ${pos.z.toFixed(1)}
+    - Mob Terdekat: ${mobInfo}
+      `;        
+      message.reply(statusMsg);
+    }
+    
   });
-
-  bot.loadPlugin(pathfinder);
-  const mcData = require('minecraft-data')(bot.version);
-  const defaultMove = new Movements(bot, mcData);
-
-  let isWandering = true;
-  let autoMineEnabled = config.utils['auto-mine']?.enabled || false;
-
-  // Fitur wander
-  function wanderAround() {
-    if (!isWandering) return;
-    const radius = 10 + Math.floor(Math.random() * 5);
-    const angle = Math.random() * 2 * Math.PI;
-    const x = bot.entity.position.x + Math.floor(Math.cos(angle) * radius);
-    const z = bot.entity.position.z + Math.floor(Math.sin(angle) * radius);
-    const y = bot.entity.position.y;
-
-    bot.pathfinder.setMovements(defaultMove);
-    bot.pathfinder.setGoal(new GoalBlock(x, y, z));
-
-    const delay = 5 + Math.floor(Math.random() * 3); // Delay 5-7 detik
-    console.log(`[WanderBot] Jalan ke (${x.toFixed(1)}, ${y.toFixed(1)}, ${z.toFixed(1)}) dalam radius ${radius} blok. Delay ${delay} detik`);
-
-    setTimeout(() => {
-      if (isWandering && !bot.pathfinder.isMoving()) wanderAround();
-    }, delay * 1000);
-  }
+  ;
+  
 
   // Anti AFK
   function startAntiAfk() {
@@ -341,7 +388,7 @@ function createBot() {
   }
 
   bot.once('spawn', () => {
-    console.log('[WanderBot] Bot joined the server');
+    console.log('GIBOT TELAH TIBAA');
     bot.pathfinder.setMovements(defaultMove);
 
     if (config.position.enabled) {
