@@ -14,6 +14,22 @@ app.get('/', (req, res) => res.send('Bot has arrived'));
 app.listen(8000, () => console.log('[Express] Server started on port 8000'));
 
 // Discord 
+
+const clientDiscord = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent] });
+
+let discordChannel;
+clientDiscord.once('ready', () => {
+  console.log(`[Discord] Bot Discord siap sebagai ${clientDiscord.user.tag}`);
+
+  discordChannel = clientDiscord.channels.cache.get(process.env.DISCORD_CHANNEL_ID);
+  if (!discordChannel) {
+    originalLog('Channel ID tidak ditemukan. Pastikan ID channel sudah benar.');
+  } else {
+    originalLog('Channel Discord ditemukan, siap kirim log.');
+  }
+});
+clientDiscord.login(process.env.DISCORD_TOKEN);
+
 clientDiscord.on('messageCreate', async (message) => {
   if (message.channel.id !== process.env.DISCORD_CHANNEL_ID || message.author.bot) return;
 
@@ -235,23 +251,7 @@ function startChopTree() {
       bot.chat('❌ Gagal tebang atau replant.');
     }
   });
-}
-
-
-const clientDiscord = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent] });
-
-let discordChannel;
-clientDiscord.once('ready', () => {
-  console.log(`[Discord] Bot Discord siap sebagai ${clientDiscord.user.tag}`);
-
-  discordChannel = clientDiscord.channels.cache.get(process.env.DISCORD_CHANNEL_ID);
-  if (!discordChannel) {
-    originalLog('Channel ID tidak ditemukan. Pastikan ID channel sudah benar.');
-  } else {
-    originalLog('Channel Discord ditemukan, siap kirim log.');
-  }
-});
-clientDiscord.login(process.env.DISCORD_TOKEN);
+};
 
 // Override console.log
 const originalLog = console.log;
