@@ -13,7 +13,7 @@
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "minecraft-server-util": "^5.4.4",
-    "mineflayer": "^4.26.0",
+    "mineflayer": "^4.27.0",
     "mineflayer-pathfinder": "^2.4.5"
   }
 }

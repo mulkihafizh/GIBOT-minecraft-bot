@@ -389,6 +389,7 @@ function startChopTree() {
 
   bot.once('spawn', () => {
     console.log('GIBOT TELAH TIBAA');
+    bot.chat('GIBOT IS HERE DAWGG')
     bot.pathfinder.setMovements(defaultMove);
 
     if (config.position.enabled) {
@@ -506,6 +507,19 @@ function startChopTree() {
   });
 
   bot.on('error', err => console.log('[ERROR]', err));
+  bot._client.removeAllListeners('passengers');
+bot._client.on('passengers', (packet) => {
+  const vehicle = bot.entities[packet.vehicleId];
+  if (!vehicle) {
+    return;
+  }
+  vehicle.passengers = [];
+  for (const id of packet.passengers) {
+    const passengerEntity = bot.entities[id];
+    if (passengerEntity) vehicle.passengers.push(passengerEntity);
+  }
+});
+
 }
 
 createBot();
