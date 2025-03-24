@@ -4,7 +4,11 @@ const config = require('./settings.json');
 const express = require('express');
 const Vec3 = require('vec3');
 const RPC = require('discord-rpc');
+const Discord = require('discord.js');
 
+const discordClient = new Discord.Client({
+  intents: [Discord.GatewayIntentBits.Guilds, Discord.GatewayIntentBits.GuildMessages, Discord.GatewayIntentBits.MessageContent]
+});
 
 require('dotenv').config();
 const { Client, GatewayIntentBits } = require('discord.js');
@@ -36,6 +40,7 @@ function setActivity() {
 
 rpc.on('ready', () => {
   setActivity();
+  console.log(`✅ Bot Discord siap sebagai ${discordClient.user.tag}`);
   console.log('[RichPresence] Discord Rich Presence aktif!');
 });
 discordClient.user.setPresence({
