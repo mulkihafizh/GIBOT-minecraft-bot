@@ -38,6 +38,10 @@ rpc.on('ready', () => {
   setActivity();
   console.log('[RichPresence] Discord Rich Presence aktif!');
 });
+discordClient.user.setPresence({
+  activities: [{ name: 'Jagain serper', type: 3 }], 
+  status: 'online',
+});
 
 rpc.login({ clientId }).catch(console.error);
 
