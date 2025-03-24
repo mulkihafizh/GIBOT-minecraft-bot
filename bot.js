@@ -3,6 +3,7 @@ const { pathfinder, Movements, goals: { GoalFollow, GoalBlock } } = require('min
 const config = require('./settings.json');
 const express = require('express');
 const Vec3 = require('vec3');
+const RPC = require('discord-rpc');
 
 
 require('dotenv').config();
@@ -14,6 +15,31 @@ app.get('/', (req, res) => res.send('Bot has arrived'));
 app.listen(8000, () => console.log('[Express] Server started on port 8000'));
 
 // Discord 
+// rich presance
+const clientId = process.env.DISCORD_CLIENT_ID; 
+const rpc = new RPC.Client({ transport: 'ipc' });
+// Presence info
+function setActivity() {
+  rpc.setActivity({
+    details: 'bot begoo',
+    state: 'Bot under development',
+    startTimestamp: 202322,
+    largeImageKey: 'embedded_background', 
+    largeImageText: 'Under development',
+    smallImageKey: 'embedded_cover',
+    buttons: [
+      { label: 'Join Discord', url: 'https://discord.gg/G9g9pT54sZ' }, 
+      { label: 'Lihat Project', url: 'https://github.com/GiffaIndr/GIBOT-minecraft-bot.git' }
+    ]
+  });
+}
+
+rpc.on('ready', () => {
+  setActivity();
+  console.log('[RichPresence] Discord Rich Presence aktif!');
+});
+
+rpc.login({ clientId }).catch(console.error);
 
 const clientDiscord = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent] });
 
@@ -214,22 +240,56 @@ function startChopTree() {
       return message.reply('🔴 Bot berhenti jalan-jalan');
     }
 
+    let followInterval = null;
+
     if (cmd === '.follow' && args[0]) {
-      const targetPlayer = args[0];
-      const target = bot.players[targetPlayer]?.entity;
-      if (target) {
+      const targetPlayerName = args[0];
+      const targetPlayer = bot.players[targetPlayerName];
+    
+      if (targetPlayer && targetPlayer.entity) {
         bot.pathfinder.setMovements(defaultMove);
-        bot.pathfinder.setGoal(new GoalFollow(target, 1));
-        bot.chat(`Oke ${targetPlayer}, aku ikut kamu!`);
-        return message.reply(`👣 Mengikuti ${targetPlayer}`);
+        bot.pathfinder.setGoal(new GoalFollow(targetPlayer.entity, 1));
+        bot.chat(`Oke gw bakal ngikut ${targetPlayerName} ampe pegel`);
+        message.reply(`👣 Mengikuti ${targetPlayerName} secara terus-menerus.`);
+    
+        // Clear existing interval
+        if (followInterval) clearInterval(followInterval);
+    
+      
+        followInterval = setInterval(() => {
+          const target = bot.players[targetPlayerName]?.entity;
+          if (target) {
+            bot.pathfinder.setGoal(new GoalFollow(target, 1));
+          } else {
+            bot.chat(`⚠️ woe lu mana ${targetPlayerName}... jangan jauh jauh`);
+          }
+        }, 3000); // cek setiap 3 detik (bisa diubah)
+    
       } else {
-        return message.reply('⚠️ Pemain tidak ditemukan.');
+        return message.reply('⚠️ dah lah ganemu.');
       }
     }
-
-    if (cmd === '.stop' && args[0] === 'follow') {
-      bot.pathfinder.setGoal(null);
-      return message.reply('🛑 Bot berhenti mengikuti pemain.');
+    
+    if (cmd === '.stop') {
+      // Stop follow khusus
+      if (args[0] === 'follow') {
+        if (followInterval) {
+          clearInterval(followInterval);
+          followInterval = null;
+        }
+        bot.pathfinder.setGoal(null);
+        bot.chat("dah gua berenti jngikutin lu");
+        return message.reply('🛑 Bot berhenti mengikuti pemain.');
+      } else {
+        // Stop general activities
+        if (followInterval) {
+          clearInterval(followInterval);
+          followInterval = null;
+        }
+        bot.pathfinder.setGoal(null);
+        bot.chat("dah gua berenti jalan jalan");
+        return message.reply('🛑 Bot berhenti dari aktivitasnya.');
+      }
     }
 
     if (cmd === '.jump') {
@@ -249,16 +309,38 @@ function startChopTree() {
       return message.reply(`📍 Koordinat Bot: X: ${pos.x.toFixed(1)}, Y: ${pos.y.toFixed(1)}, Z: ${pos.z.toFixed(1)}`);
     }
 
-    if (cmd === '.tp' && args.length === 3) {
-      const [x, y, z] = args.map(Number);
-      if (!isNaN(x) && !isNaN(y) && !isNaN(z)) {
-        bot.pathfinder.setMovements(defaultMove);
-        bot.pathfinder.setGoal(new GoalBlock(x, y, z));
-        return message.reply(`🛫 Teleport ke X: ${x}, Y: ${y}, Z: ${z}`);
-      } else {
-        return message.reply('⚠️ Koordinat tidak valid.');
+    if (cmd === '.tp') {
+      // Jika argumen hanya 1, berarti target player
+      if (args.length === 1) {
+          const targetName = args[0];
+          const target = bot.players[targetName]?.entity;
+  
+          if (!target) {
+              return message.reply(`❌ Player **${targetName}** tidak ditemukan disekitar chunk.`);
+          }
+  
+          const pos = target.position;
+          bot.pathfinder.setMovements(defaultMove);
+          bot.pathfinder.setGoal(new GoalBlock(pos.x, pos.y, pos.z));
+  
+          return message.reply(`🛫 Bot menuju ke player **${targetName}** di X: ${pos.x.toFixed(2)}, Y: ${pos.y.toFixed(2)}, Z: ${pos.z.toFixed(2)}`);
       }
-    }
+  
+      // Jika argumen ada 3, berarti target koordinat
+      if (args.length === 3) {
+          const [x, y, z] = args.map(Number);
+          if (!isNaN(x) && !isNaN(y) && !isNaN(z)) {
+              bot.pathfinder.setMovements(defaultMove);
+              bot.pathfinder.setGoal(new GoalBlock(x, y, z));
+              return message.reply(`🛫 Teleport ke X: ${x}, Y: ${y}, Z: ${z}`);
+          } else {
+              return message.reply('⚠️ Koordinat tidak valid.');
+          }
+      }
+  
+      return message.reply('⚠️ Format salah! Gunakan `.tp <playerName>` atau `.tp <x> <y> <z>`');
+  }
+  
 
     if (cmd === '.guard' && (args[0] === 'on' || args[0] === 'off')) {
       guardEnabled = args[0] === 'on';
@@ -389,7 +471,7 @@ function startChopTree() {
 
   bot.once('spawn', () => {
     console.log('GIBOT TELAH TIBAA');
-    bot.chat('GIBOT IS HERE DAWGG')
+    bot.chat('GIBOT DATANG DAWGGGGG')
     bot.pathfinder.setMovements(defaultMove);
 
     if (config.position.enabled) {
@@ -430,8 +512,37 @@ function startChopTree() {
         i = (i + 1) % messages.length;
       }, delay);
     }
-  });
+    if (!bot.alive) return; 
 
+  bot.chat('🔥 Gua hidup lagi bro, lanjut kelayapan...');
+  });
+  let followInterval = null;
+  let discordClient = null;
+bot.once('death', () => {
+    if (followInterval) {
+      clearInterval(followInterval);
+      followInterval = null;
+    }
+    bot.pathfinder.setGoal(null);
+    bot.chat('☠️ Gua mati bro... semua task gua stop dulu.');
+    if (discordClient) {
+      discordClient.channels.cache.get(config.discord.channel).send('☠️ Bot tewas! Semua aktivitas dihentikan.');
+    }
+});
+
+
+    bot.once('death', () => {
+      if (followInterval) {
+        clearInterval(followInterval);
+        followInterval = null;
+      }
+      bot.pathfinder.setGoal(null);
+      bot.chat('☠️ Gua mati bro... semua task gua stop dulu.');
+      if (discordClient) {
+        discordClient.channels.cache.get(config.discord.channel).send('☠️ Bot tewas! Semua aktivitas dihentikan.');
+      }
+    });
+  
   // Chat Handler
   bot.on('chat', (username, message) => {
     if (username === bot.username) return;
