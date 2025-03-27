@@ -54,9 +54,5 @@
     "auto-reconnect": true,
     "auto-recconect-delay": 60000,
      "webhook_url": "https://discord.com/api/webhooks/1352951342502772789/24n4GBmTUILJuR4Wr5dSJoSTGQbM45ygi6sRUVepyEoYtOjy7CjkvRDDIJAiEloKYbl-"
-  },
-
-  "discord": {
-    "channel_id": ""
   }
 }
