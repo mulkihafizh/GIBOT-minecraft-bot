@@ -7,7 +7,7 @@ const RPC = require('discord-rpc');
 
 
 require('dotenv').config();
-const { Client, GatewayIntentBits } = require('discord.js');
+// const { Client, GatewayIntentBits } = require('discord.js');
 
 // Web server
 const app = express();
@@ -17,53 +17,53 @@ app.listen(8000, () => console.log('[Express] Server started on port 8000'));
 // Discord 
 // rich presance
 const clientId = process.env.DISCORD_CLIENT_ID; 
-const rpc = new RPC.Client({ transport: 'ipc' });
-// Presence info
-function setActivity() {
-  rpc.setActivity({
-    details: 'bot begoo',
-    state: 'Bot under development',
-    startTimestamp: 202322,
-    largeImageKey: 'embedded_background', 
-    largeImageText: 'Under development',
-    smallImageKey: 'embedded_cover',
-    buttons: [
-      { label: 'Join Discord', url: 'https://discord.gg/G9g9pT54sZ' }, 
-      { label: 'Lihat Project', url: 'https://github.com/GiffaIndr/GIBOT-minecraft-bot.git' }
-    ]
-  });
-}
+// const rpc = new RPC.Client({ transport: 'ipc' });
+// // Presence info
+// function setActivity() {
+//   rpc.setActivity({
+//     details: 'bot begoo',
+//     state: 'Bot under development',
+//     startTimestamp: 202322,
+//     largeImageKey: 'embedded_background', 
+//     largeImageText: 'Under development',
+//     smallImageKey: 'embedded_cover',
+//     buttons: [
+//       { label: 'Join Discord', url: 'https://discord.gg/G9g9pT54sZ' }, 
+//       { label: 'Lihat Project', url: 'https://github.com/GiffaIndr/GIBOT-minecraft-bot.git' }
+//     ]
+//   });
+// }
 
-rpc.on('ready', () => {
-  setActivity();
-  console.log('[RichPresence] Discord Rich Presence aktif!');
-});
+// rpc.on('ready', () => {
+//   setActivity();
+//   console.log('[RichPresence] Discord Rich Presence aktif!');
+// });
 
-rpc.login({ clientId }).catch(console.error);
+// rpc.login({ clientId }).catch(console.error);
 
-const clientDiscord = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent] });
+// const clientDiscord = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent] });
 
-let discordChannel;
-clientDiscord.once('ready', () => {
-  console.log(`[Discord] Bot Discord siap sebagai ${clientDiscord.user.tag}`);
+// let discordChannel;
+// clientDiscord.once('ready', () => {
+//   console.log(`[Discord] Bot Discord siap sebagai ${clientDiscord.user.tag}`);
 
-  discordChannel = clientDiscord.channels.cache.get(process.env.DISCORD_CHANNEL_ID);
-  if (!discordChannel) {
-    originalLog('Channel ID tidak ditemukan. Pastikan ID channel sudah benar.');
-  } else {
-    originalLog('Channel Discord ditemukan, siap kirim log.');
-  }
-});
-clientDiscord.login(process.env.DISCORD_TOKEN);
+//   discordChannel = clientDiscord.channels.cache.get(process.env.DISCORD_CHANNEL_ID);
+//   if (!discordChannel) {
+//     originalLog('Channel ID tidak ditemukan. Pastikan ID channel sudah benar.');
+//   } else {
+//     originalLog('Channel Discord ditemukan, siap kirim log.');
+//   }
+// });
+// clientDiscord.login(process.env.DISCORD_TOKEN);
 
 
 // Override console.log
 const originalLog = console.log;
 console.log = (...args) => {
   const logMessage = args.join(' ');
-  if (discordChannel) {
-    discordChannel.send('```' + logMessage + '```').catch(err => originalLog('Discord log error:', err));
-  }
+  // if (discordChannel) {
+  //   discordChannel.send('```' + logMessage + '```').catch(err => originalLog('Discord log error:', err));
+  // }
   originalLog(...args);
 };
 function createBot() {
@@ -211,222 +211,222 @@ function startChopTree() {
   });
 };
 
-  clientDiscord.on('messageCreate', async (message) => {
-    if (message.channel.id !== process.env.DISCORD_CHANNEL_ID || message.author.bot) return;
+  // clientDiscord.on('messageCreate', async (message) => {
+  //   if (message.channel.id !== process.env.DISCORD_CHANNEL_ID || message.author.bot) return;
 
-    const args = message.content.split(' ');
-    const cmd = args.shift().toLowerCase();
+  //   const args = message.content.split(' ');
+  //   const cmd = args.shift().toLowerCase();
 
-    if (cmd === '.say') {
-      const text = args.join(' ');
-      bot.chat(text);
-      return message.reply(`✅ Mengirim pesan: ${text}`);
-    }
+  //   if (cmd === '.say') {
+  //     const text = args.join(' ');
+  //     bot.chat(text);
+  //     return message.reply(`✅ Mengirim pesan: ${text}`);
+  //   }
 
-    if (cmd === '.locate' && args[0] === 'diamond') {
-      locateDiamonds();
-      return message.reply('🔍 Mencari diamond...');
-    }
+  //   if (cmd === '.locate' && args[0] === 'diamond') {
+  //     locateDiamonds();
+  //     return message.reply('🔍 Mencari diamond...');
+  //   }
 
-    if (cmd === '.start' && args[0] === 'wander') {
-      isWandering = true;
-      wanderAround();
-      return message.reply('🟢 Bot mulai jalan-jalan');
-    }
+  //   if (cmd === '.start' && args[0] === 'wander') {
+  //     isWandering = true;
+  //     wanderAround();
+  //     return message.reply('🟢 Bot mulai jalan-jalan');
+  //   }
 
-    if (cmd === '.stop' && args[0] === 'wander') {
-      isWandering = false;
-      bot.pathfinder.setGoal(null);
-      return message.reply('🔴 Bot berhenti jalan-jalan');
-    }
+  //   if (cmd === '.stop' && args[0] === 'wander') {
+  //     isWandering = false;
+  //     bot.pathfinder.setGoal(null);
+  //     return message.reply('🔴 Bot berhenti jalan-jalan');
+  //   }
 
-    let followInterval = null;
+  //   let followInterval = null;
 
-    if (cmd === '.follow' && args[0]) {
-      const targetPlayerName = args[0];
-      const targetPlayer = bot.players[targetPlayerName];
+  //   if (cmd === '.follow' && args[0]) {
+  //     const targetPlayerName = args[0];
+  //     const targetPlayer = bot.players[targetPlayerName];
     
-      if (targetPlayer && targetPlayer.entity) {
-        bot.pathfinder.setMovements(defaultMove);
-        bot.pathfinder.setGoal(new GoalFollow(targetPlayer.entity, 1));
-        bot.chat(`Oke gw bakal ngikut ${targetPlayerName} ampe pegel`);
-        message.reply(`👣 Mengikuti ${targetPlayerName} secara terus-menerus.`);
+  //     if (targetPlayer && targetPlayer.entity) {
+  //       bot.pathfinder.setMovements(defaultMove);
+  //       bot.pathfinder.setGoal(new GoalFollow(targetPlayer.entity, 1));
+  //       bot.chat(`Oke gw bakal ngikut ${targetPlayerName} ampe pegel`);
+  //       message.reply(`👣 Mengikuti ${targetPlayerName} secara terus-menerus.`);
     
-        // Clear existing interval
-        if (followInterval) clearInterval(followInterval);
+  //       // Clear existing interval
+  //       if (followInterval) clearInterval(followInterval);
     
       
-        followInterval = setInterval(() => {
-          const target = bot.players[targetPlayerName]?.entity;
-          if (target) {
-            bot.pathfinder.setGoal(new GoalFollow(target, 1));
-          } else {
-            bot.chat(`⚠️ woe lu mana ${targetPlayerName}... jangan jauh jauh`);
-          }
-        }, 3000); // cek setiap 3 detik (bisa diubah)
+  //       followInterval = setInterval(() => {
+  //         const target = bot.players[targetPlayerName]?.entity;
+  //         if (target) {
+  //           bot.pathfinder.setGoal(new GoalFollow(target, 1));
+  //         } else {
+  //           bot.chat(`⚠️ woe lu mana ${targetPlayerName}... jangan jauh jauh`);
+  //         }
+  //       }, 3000); // cek setiap 3 detik (bisa diubah)
     
-      } else {
-        return message.reply('⚠️ dah lah ganemu.');
-      }
-    }
+  //     } else {
+  //       return message.reply('⚠️ dah lah ganemu.');
+  //     }
+  //   }
     
-    if (cmd === '.stop') {
-      // Stop follow khusus
-      if (args[0] === 'follow') {
-        if (followInterval) {
-          clearInterval(followInterval);
-          followInterval = null;
-        }
-        bot.pathfinder.setGoal(null);
-        bot.chat("dah gua berenti jngikutin lu");
-        return message.reply('🛑 Bot berhenti mengikuti pemain.');
-      } else {
-        // Stop general activities
-        if (followInterval) {
-          clearInterval(followInterval);
-          followInterval = null;
-        }
-        bot.pathfinder.setGoal(null);
-        bot.chat("dah gua berenti jalan jalan");
-        return message.reply('🛑 Bot berhenti dari aktivitasnya.');
-      }
-    }
+  //   if (cmd === '.stop') {
+  //     // Stop follow khusus
+  //     if (args[0] === 'follow') {
+  //       if (followInterval) {
+  //         clearInterval(followInterval);
+  //         followInterval = null;
+  //       }
+  //       bot.pathfinder.setGoal(null);
+  //       bot.chat("dah gua berenti jngikutin lu");
+  //       return message.reply('🛑 Bot berhenti mengikuti pemain.');
+  //     } else {
+  //       // Stop general activities
+  //       if (followInterval) {
+  //         clearInterval(followInterval);
+  //         followInterval = null;
+  //       }
+  //       bot.pathfinder.setGoal(null);
+  //       bot.chat("dah gua berenti jalan jalan");
+  //       return message.reply('🛑 Bot berhenti dari aktivitasnya.');
+  //     }
+  //   }
 
-    if (cmd === '.jump') {
-      bot.setControlState('jump', true);
-      setTimeout(() => bot.setControlState('jump', false), 500);
-      return message.reply('⏫ Bot melompat');
-    }
+  //   if (cmd === '.jump') {
+  //     bot.setControlState('jump', true);
+  //     setTimeout(() => bot.setControlState('jump', false), 500);
+  //     return message.reply('⏫ Bot melompat');
+  //   }
 
-    if (cmd === '.kill' && args[0] === 'drops') {
-      const radius = config['anti-lag']?.clear_radius || 10;
-      bot.chat(`/kill @e[type=item,distance=..${radius}]`);
-      return message.reply(`🧹 Membersihkan drop item di radius ${radius} blok`);
-    }
+  //   if (cmd === '.kill' && args[0] === 'drops') {
+  //     const radius = config['anti-lag']?.clear_radius || 10;
+  //     bot.chat(`/kill @e[type=item,distance=..${radius}]`);
+  //     return message.reply(`🧹 Membersihkan drop item di radius ${radius} blok`);
+  //   }
 
-    if (cmd === '.coords') {
-      const pos = bot.entity.position;
-      return message.reply(`📍 Koordinat Bot: X: ${pos.x.toFixed(1)}, Y: ${pos.y.toFixed(1)}, Z: ${pos.z.toFixed(1)}`);
-    }
+  //   if (cmd === '.coords') {
+  //     const pos = bot.entity.position;
+  //     return message.reply(`📍 Koordinat Bot: X: ${pos.x.toFixed(1)}, Y: ${pos.y.toFixed(1)}, Z: ${pos.z.toFixed(1)}`);
+  //   }
 
-    if (cmd === '.tp') {
-      // Jika argumen hanya 1, berarti target player
-      if (args.length === 1) {
-          const targetName = args[0];
-          const target = bot.players[targetName]?.entity;
+  //   if (cmd === '.tp') {
+  //     // Jika argumen hanya 1, berarti target player
+  //     if (args.length === 1) {
+  //         const targetName = args[0];
+  //         const target = bot.players[targetName]?.entity;
   
-          if (!target) {
-              return message.reply(`❌ Player **${targetName}** tidak ditemukan disekitar chunk.`);
-          }
+  //         if (!target) {
+  //             return message.reply(`❌ Player **${targetName}** tidak ditemukan disekitar chunk.`);
+  //         }
   
-          const pos = target.position;
-          bot.pathfinder.setMovements(defaultMove);
-          bot.pathfinder.setGoal(new GoalBlock(pos.x, pos.y, pos.z));
+  //         const pos = target.position;
+  //         bot.pathfinder.setMovements(defaultMove);
+  //         bot.pathfinder.setGoal(new GoalBlock(pos.x, pos.y, pos.z));
   
-          return message.reply(`🛫 Bot menuju ke player **${targetName}** di X: ${pos.x.toFixed(2)}, Y: ${pos.y.toFixed(2)}, Z: ${pos.z.toFixed(2)}`);
-      }
+  //         return message.reply(`🛫 Bot menuju ke player **${targetName}** di X: ${pos.x.toFixed(2)}, Y: ${pos.y.toFixed(2)}, Z: ${pos.z.toFixed(2)}`);
+  //     }
   
-      // Jika argumen ada 3, berarti target koordinat
-      if (args.length === 3) {
-          const [x, y, z] = args.map(Number);
-          if (!isNaN(x) && !isNaN(y) && !isNaN(z)) {
-              bot.pathfinder.setMovements(defaultMove);
-              bot.pathfinder.setGoal(new GoalBlock(x, y, z));
-              return message.reply(`🛫 Teleport ke X: ${x}, Y: ${y}, Z: ${z}`);
-          } else {
-              return message.reply('⚠️ Koordinat tidak valid.');
-          }
-      }
+  //     // Jika argumen ada 3, berarti target koordinat
+  //     if (args.length === 3) {
+  //         const [x, y, z] = args.map(Number);
+  //         if (!isNaN(x) && !isNaN(y) && !isNaN(z)) {
+  //             bot.pathfinder.setMovements(defaultMove);
+  //             bot.pathfinder.setGoal(new GoalBlock(x, y, z));
+  //             return message.reply(`🛫 Teleport ke X: ${x}, Y: ${y}, Z: ${z}`);
+  //         } else {
+  //             return message.reply('⚠️ Koordinat tidak valid.');
+  //         }
+  //     }
   
-      return message.reply('⚠️ Format salah! Gunakan `.tp <playerName>` atau `.tp <x> <y> <z>`');
-  }
+  //     return message.reply('⚠️ Format salah! Gunakan `.tp <playerName>` atau `.tp <x> <y> <z>`');
+  // }
   
 
-    if (cmd === '.guard' && (args[0] === 'on' || args[0] === 'off')) {
-      guardEnabled = args[0] === 'on';
-      if (guardEnabled) {
-        bot.chat('Mode guard diaktifkan. Siap serang mobs hostile.');
-        startGuarding(bot);
-        return message.reply('🛡️ Mode guard ON.');
-      } else {
-        return message.reply('⚪ Mode guard OFF.');
-      }
-    }
+  //   if (cmd === '.guard' && (args[0] === 'on' || args[0] === 'off')) {
+  //     guardEnabled = args[0] === 'on';
+  //     if (guardEnabled) {
+  //       bot.chat('Mode guard diaktifkan. Siap serang mobs hostile.');
+  //       startGuarding(bot);
+  //       return message.reply('🛡️ Mode guard ON.');
+  //     } else {
+  //       return message.reply('⚪ Mode guard OFF.');
+  //     }
+  //   }
 
-    if (cmd === '.inventory') {
-      const items = bot.inventory.items().map(item => `${item.name} x${item.count}`).join('\n') || 'Inventory kosong.';
-      return message.reply(`🎒 Inventory Bot:\n\`\`\`${items}\`\`\``);
-    }
+  //   if (cmd === '.inventory') {
+  //     const items = bot.inventory.items().map(item => `${item.name} x${item.count}`).join('\n') || 'Inventory kosong.';
+  //     return message.reply(`🎒 Inventory Bot:\n\`\`\`${items}\`\`\``);
+  //   }
 
-    if (cmd === '.drop' && args.length >= 2) {
-      const itemName = args[0];
-      const amount = parseInt(args[1]);
-      if (isNaN(amount) || amount <= 0) {
-        return message.reply('⚠️ Jumlah harus berupa angka yang valid.');
-      }
-      const item = bot.inventory.items().find(i => i.name === itemName);
-      if (item) {
-        bot.toss(item.type, null, amount, err => {
-          if (err) return message.reply('❌ Gagal drop item.');
-          return message.reply(`📦 Drop ${amount} ${itemName}`);
-        });
-      } else {
-        return message.reply('⚠️ Item tidak ditemukan di inventory.');
-      }
-    }
+  //   if (cmd === '.drop' && args.length >= 2) {
+  //     const itemName = args[0];
+  //     const amount = parseInt(args[1]);
+  //     if (isNaN(amount) || amount <= 0) {
+  //       return message.reply('⚠️ Jumlah harus berupa angka yang valid.');
+  //     }
+  //     const item = bot.inventory.items().find(i => i.name === itemName);
+  //     if (item) {
+  //       bot.toss(item.type, null, amount, err => {
+  //         if (err) return message.reply('❌ Gagal drop item.');
+  //         return message.reply(`📦 Drop ${amount} ${itemName}`);
+  //       });
+  //     } else {
+  //       return message.reply('⚠️ Item tidak ditemukan di inventory.');
+  //     }
+  //   }
 
-    if (cmd === '.eat') {
-      const food = bot.inventory.items().find(item => item.name.includes('beef') || item.name.includes('bread') || item.name.includes('porkchop') || item.name.includes('apple'));
-      if (food) {
-        bot.equip(food, 'hand', () => {
-          bot.consume();
-          return message.reply(`🍽️ Makan ${food.name}`);
-        });
-      } else {
-        return message.reply('⚠️ Tidak ada makanan di inventory.');
-      }
-    }
+  //   if (cmd === '.eat') {
+  //     const food = bot.inventory.items().find(item => item.name.includes('beef') || item.name.includes('bread') || item.name.includes('porkchop') || item.name.includes('apple'));
+  //     if (food) {
+  //       bot.equip(food, 'hand', () => {
+  //         bot.consume();
+  //         return message.reply(`🍽️ Makan ${food.name}`);
+  //       });
+  //     } else {
+  //       return message.reply('⚠️ Tidak ada makanan di inventory.');
+  //     }
+  //   }
 
-    if (cmd === '.health') {
-      const hp = bot.health;
-      const food = bot.food;
-      return message.reply(`❤️ HP: ${hp.toFixed(1)}/20 | 🍗 Hunger: ${food}/20`);
-    }
+  //   if (cmd === '.health') {
+  //     const hp = bot.health;
+  //     const food = bot.food;
+  //     return message.reply(`❤️ HP: ${hp.toFixed(1)}/20 | 🍗 Hunger: ${food}/20`);
+  //   }
 
-    if (cmd === '.tunnel' && args[0]) {
-      const length = parseInt(args[0]);
-      if (isNaN(length) || length <= 0) {
-        return message.reply('⚠️ Panjang tunnel harus berupa angka.');
-      }
-      startTunnel(length);
-      return message.reply(`⛏️ Mulai gali tunnel sepanjang ${length} blok.`);
-    }
+  //   if (cmd === '.tunnel' && args[0]) {
+  //     const length = parseInt(args[0]);
+  //     if (isNaN(length) || length <= 0) {
+  //       return message.reply('⚠️ Panjang tunnel harus berupa angka.');
+  //     }
+  //     startTunnel(length);
+  //     return message.reply(`⛏️ Mulai gali tunnel sepanjang ${length} blok.`);
+  //   }
 
-    if (cmd === '.chop' && args[0] === 'tree') {
-      startChopTree();
-      return message.reply('🌳 Mulai cari dan tebang pohon.');
-    }
+  //   if (cmd === '.chop' && args[0] === 'tree') {
+  //     startChopTree();
+  //     return message.reply('🌳 Mulai cari dan tebang pohon.');
+  //   }
 
-    if (cmd === '.status') {
-      const pos = bot.entity.position;
-      const nearestMob = findNearestHostile(bot);
-      const mobInfo = nearestMob 
-        ? `${nearestMob.mobType} di X:${nearestMob.position.x.toFixed(1)} Y:${nearestMob.position.y.toFixed(1)} Z:${nearestMob.position.z.toFixed(1)}`
-        : 'Tidak ada mobs hostile terdekat.';
+  //   if (cmd === '.status') {
+  //     const pos = bot.entity.position;
+  //     const nearestMob = findNearestHostile(bot);
+  //     const mobInfo = nearestMob 
+  //       ? `${nearestMob.mobType} di X:${nearestMob.position.x.toFixed(1)} Y:${nearestMob.position.y.toFixed(1)} Z:${nearestMob.position.z.toFixed(1)}`
+  //       : 'Tidak ada mobs hostile terdekat.';
         
-      const statusMsg = `
-    🟢 Status Bot:
-    - Wander: ${isWandering ? 'ON' : 'OFF'}
-    - Guard: ${guardEnabled ? 'ON' : 'OFF'}
-    - Auto-Mine: ${autoMineEnabled ? 'ON' : 'OFF'}
-    - Lokasi: X: ${pos.x.toFixed(1)}, Y: ${pos.y.toFixed(1)}, Z: ${pos.z.toFixed(1)}
-    - Mob Terdekat: ${mobInfo}
-      `;        
-      message.reply(statusMsg);
-    }
+  //     const statusMsg = `
+  //   🟢 Status Bot:
+  //   - Wander: ${isWandering ? 'ON' : 'OFF'}
+  //   - Guard: ${guardEnabled ? 'ON' : 'OFF'}
+  //   - Auto-Mine: ${autoMineEnabled ? 'ON' : 'OFF'}
+  //   - Lokasi: X: ${pos.x.toFixed(1)}, Y: ${pos.y.toFixed(1)}, Z: ${pos.z.toFixed(1)}
+  //   - Mob Terdekat: ${mobInfo}
+  //     `;        
+  //     message.reply(statusMsg);
+  //   }
     
-  });
-  ;
+  // });
+  // ;
   
 
   // Anti AFK

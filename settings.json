@@ -9,16 +9,16 @@
 },
 
   "bot-account": {
-    "username": "gibot", 
+    "username": "prabowo", 
     "password": "",
     "type": "offline"
   },
   
 
   "server": {
-    "ip": "ahai.aternos.me", 
+    "ip": "prabowotewass.aternos.me", 
     "port": 21030,   
-    "version": "1.21.4"   
+    "version": "1.12.2"   
   },
   
   "position": {
