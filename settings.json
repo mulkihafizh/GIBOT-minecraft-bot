@@ -1,26 +1,25 @@
 {
-"anti-lag": {
-  "enabled": true,
-  "clear_radius": 5,
-  "clear_interval": 30,
-  "tps_threshold": 15,
-  "critical_tps": 8,
-  "reconnect_delay": 60
-},
+  "anti-lag": {
+    "enabled": true,
+    "clear_radius": 5,
+    "clear_interval": 30,
+    "tps_threshold": 15,
+    "critical_tps": 8,
+    "reconnect_delay": 60
+  },
 
   "bot-account": {
-    "username": "prabowo", 
+    "username": "guahtesting",
     "password": "",
     "type": "offline"
   },
-  
 
   "server": {
-    "ip": "prabowotewass.aternos.me", 
-    "port": 21030,   
-    "version": "1.12.2"   
+    "ip": "prabowotewass.aternos.me",
+    "port": 14465,
+    "version": "1.12.2"
   },
-  
+
   "position": {
     "enabled": false,
     "x": 0,
@@ -43,16 +42,12 @@
       "enabled": false,
       "repeat": false,
       "repeat-delay": 60,
-      "messages": [
-        "jan lupa turu"
-      ]
+      "messages": ["jan lupa turu"]
     },
-    
-    
 
     "chat-log": true,
     "auto-reconnect": true,
     "auto-recconect-delay": 60000,
-     "webhook_url": "https://discord.com/api/webhooks/1352951342502772789/24n4GBmTUILJuR4Wr5dSJoSTGQbM45ygi6sRUVepyEoYtOjy7CjkvRDDIJAiEloKYbl-"
+    "webhook_url": "https://discord.com/api/webhooks/1352951342502772789/24n4GBmTUILJuR4Wr5dSJoSTGQbM45ygi6sRUVepyEoYtOjy7CjkvRDDIJAiEloKYbl-"
   }
 }

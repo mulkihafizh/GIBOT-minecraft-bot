@@ -16,7 +16,7 @@ app.listen(8000, () => console.log('[Express] Server started on port 8000'));
 
 // Discord 
 // rich presance
-const clientId = process.env.DISCORD_CLIENT_ID; 
+const clientId = process.env.DISCORD_CLIENT_ID;
 // const rpc = new RPC.Client({ transport: 'ipc' });
 // // Presence info
 // function setActivity() {
@@ -76,6 +76,7 @@ function createBot() {
     version: config.server.version,
   });
 
+
   bot.loadPlugin(pathfinder);
   const mcData = require('minecraft-data')(bot.version);
   const defaultMove = new Movements(bot, mcData);
@@ -87,10 +88,10 @@ function createBot() {
   function findNearestHostile(bot) {
     const mobs = bot.nearestEntity(entity => {
       return entity.type === 'mob' &&
-             entity.position &&
-             entity.mobType &&
-             ['Zombie', 'Skeleton', 'Creeper', 'Spider', 'Enderman', 'Pillager'].includes(entity.mobType) &&
-             bot.entity.position.distanceTo(entity.position) < 16;
+        entity.position &&
+        entity.mobType &&
+        ['Zombie', 'Skeleton', 'Creeper', 'Spider', 'Enderman', 'Pillager'].includes(entity.mobType) &&
+        bot.entity.position.distanceTo(entity.position) < 16;
     });
     return mobs;
   }
@@ -113,103 +114,103 @@ function createBot() {
       if (isWandering && !bot.pathfinder.isMoving()) wanderAround();
     }, delay * 1000);
   }
-function startGuarding(bot) {
-  const guardArea = bot.entity.position.clone(); // Misal guard di posisi saat ini
-  bot.on('physicTick', () => {
-    const mob = findNearestHostile(bot);
-    if (mob) {
-      bot.lookAt(mob.position.offset(0, mob.height, 0));
-      bot.attack(mob);
+  function startGuarding(bot) {
+    const guardArea = bot.entity.position.clone(); // Misal guard di posisi saat ini
+    bot.on('physicTick', () => {
+      const mob = findNearestHostile(bot);
+      if (mob) {
+        bot.lookAt(mob.position.offset(0, mob.height, 0));
+        bot.attack(mob);
+      }
+    });
+
+    bot.chat('Mode guard diaktifkan.');
+  }
+  function startGuarding(bot) {
+    const guardArea = bot.entity.position.clone(); // Misal guard di posisi saat ini
+    bot.on('physicTick', () => {
+      const mob = findNearestHostile(bot);
+      if (mob) {
+        bot.lookAt(mob.position.offset(0, mob.height, 0));
+        bot.attack(mob);
+      }
+    });
+
+    bot.chat('Mode guard diaktifkan.');
+  }
+  function stopGuarding(bot) {
+    bot.removeAllListeners('physicTick');
+    bot.chat('Mode guard dimatikan.');
+  }
+
+  function startTunnel(length) {
+    const pos = bot.entity.position.clone();
+    let blocksMined = 0;
+
+    bot.on('blockUpdate', block => {
+      if (blocksMined >= length) {
+        bot.removeAllListeners('blockUpdate');
+        bot.chat('🚧 Tunnel selesai.');
+        return;
+      }
+    });
+
+    async function digForward() {
+      for (let i = 0; i < length; i++) {
+        const forward = bot.entity.position.offset(1, 0, 0); // arah X+
+        const block = bot.blockAt(forward);
+        if (block && bot.canDigBlock(block)) {
+          try {
+            await bot.dig(block);
+            blocksMined++;
+          } catch (err) {
+            bot.chat('⛔ Gagal gali block.');
+          }
+        }
+        bot.setControlState('forward', true);
+        await bot.waitForTicks(10);
+        bot.setControlState('forward', false);
+      }
+      bot.chat('⛏️ Tunnel selesai.');
     }
-  });
 
-  bot.chat('Mode guard diaktifkan.');
-}
-function startGuarding(bot) {
-  const guardArea = bot.entity.position.clone(); // Misal guard di posisi saat ini
-  bot.on('physicTick', () => {
-    const mob = findNearestHostile(bot);
-    if (mob) {
-      bot.lookAt(mob.position.offset(0, mob.height, 0));
-      bot.attack(mob);
-    }
-  });
+    digForward();
+  }
+  function startChopTree() {
+    const treeBlocks = bot.findBlocks({
+      matching: block => block.name.includes('log'),
+      maxDistance: 32,
+      count: 1
+    });
 
-  bot.chat('Mode guard diaktifkan.');
-}
-function stopGuarding(bot) {
-  bot.removeAllListeners('physicTick');
-  bot.chat('Mode guard dimatikan.');
-}
-
-function startTunnel(length) {
-  const pos = bot.entity.position.clone();
-  let blocksMined = 0;
-
-  bot.on('blockUpdate', block => {
-    if (blocksMined >= length) {
-      bot.removeAllListeners('blockUpdate');
-      bot.chat('🚧 Tunnel selesai.');
+    if (!treeBlocks.length) {
+      bot.chat('🌲 Tidak ada pohon terdekat.');
       return;
     }
-  });
 
-  async function digForward() {
-    for (let i = 0; i < length; i++) {
-      const forward = bot.entity.position.offset(1, 0, 0); // arah X+
-      const block = bot.blockAt(forward);
-      if (block && bot.canDigBlock(block)) {
-        try {
-          await bot.dig(block);
-          blocksMined++;
-        } catch (err) {
-          bot.chat('⛔ Gagal gali block.');
+    const treePos = treeBlocks[0];
+    const block = bot.blockAt(treePos);
+
+    bot.pathfinder.setGoal(new GoalBlock(treePos.x, treePos.y, treePos.z));
+    bot.once('goal_reached', async () => {
+      try {
+        await bot.dig(block);
+        bot.chat('🪓 Pohon ditebang.');
+
+        // Auto-replant jika punya sapling
+        const sapling = bot.inventory.items().find(item => item.name.includes('sapling'));
+        if (sapling) {
+          const dirtBlock = bot.blockAt(treePos);
+          if (dirtBlock && dirtBlock.name === 'dirt') {
+            await bot.placeBlock(dirtBlock, new Vec3(0, 1, 0));
+            bot.chat('🌱 Replant berhasil.');
+          }
         }
+      } catch (err) {
+        bot.chat('❌ Gagal tebang atau replant.');
       }
-      bot.setControlState('forward', true);
-      await bot.waitForTicks(10);
-      bot.setControlState('forward', false);
-    }
-    bot.chat('⛏️ Tunnel selesai.');
-  }
-
-  digForward();
-}
-function startChopTree() {
-  const treeBlocks = bot.findBlocks({
-    matching: block => block.name.includes('log'),
-    maxDistance: 32,
-    count: 1
-  });
-
-  if (!treeBlocks.length) {
-    bot.chat('🌲 Tidak ada pohon terdekat.');
-    return;
-  }
-
-  const treePos = treeBlocks[0];
-  const block = bot.blockAt(treePos);
-
-  bot.pathfinder.setGoal(new GoalBlock(treePos.x, treePos.y, treePos.z));
-  bot.once('goal_reached', async () => {
-    try {
-      await bot.dig(block);
-      bot.chat('🪓 Pohon ditebang.');
-
-      // Auto-replant jika punya sapling
-      const sapling = bot.inventory.items().find(item => item.name.includes('sapling'));
-      if (sapling) {
-        const dirtBlock = bot.blockAt(treePos);
-        if (dirtBlock && dirtBlock.name === 'dirt') {
-          await bot.placeBlock(dirtBlock, new Vec3(0, 1, 0));
-          bot.chat('🌱 Replant berhasil.');
-        }
-      }
-    } catch (err) {
-      bot.chat('❌ Gagal tebang atau replant.');
-    }
-  });
-};
+    });
+  };
 
   // clientDiscord.on('messageCreate', async (message) => {
   //   if (message.channel.id !== process.env.DISCORD_CHANNEL_ID || message.author.bot) return;
@@ -245,17 +246,17 @@ function startChopTree() {
   //   if (cmd === '.follow' && args[0]) {
   //     const targetPlayerName = args[0];
   //     const targetPlayer = bot.players[targetPlayerName];
-    
+
   //     if (targetPlayer && targetPlayer.entity) {
   //       bot.pathfinder.setMovements(defaultMove);
   //       bot.pathfinder.setGoal(new GoalFollow(targetPlayer.entity, 1));
   //       bot.chat(`Oke gw bakal ngikut ${targetPlayerName} ampe pegel`);
   //       message.reply(`👣 Mengikuti ${targetPlayerName} secara terus-menerus.`);
-    
+
   //       // Clear existing interval
   //       if (followInterval) clearInterval(followInterval);
-    
-      
+
+
   //       followInterval = setInterval(() => {
   //         const target = bot.players[targetPlayerName]?.entity;
   //         if (target) {
@@ -264,12 +265,12 @@ function startChopTree() {
   //           bot.chat(`⚠️ woe lu mana ${targetPlayerName}... jangan jauh jauh`);
   //         }
   //       }, 3000); // cek setiap 3 detik (bisa diubah)
-    
+
   //     } else {
   //       return message.reply('⚠️ dah lah ganemu.');
   //     }
   //   }
-    
+
   //   if (cmd === '.stop') {
   //     // Stop follow khusus
   //     if (args[0] === 'follow') {
@@ -314,18 +315,18 @@ function startChopTree() {
   //     if (args.length === 1) {
   //         const targetName = args[0];
   //         const target = bot.players[targetName]?.entity;
-  
+
   //         if (!target) {
   //             return message.reply(`❌ Player **${targetName}** tidak ditemukan disekitar chunk.`);
   //         }
-  
+
   //         const pos = target.position;
   //         bot.pathfinder.setMovements(defaultMove);
   //         bot.pathfinder.setGoal(new GoalBlock(pos.x, pos.y, pos.z));
-  
+
   //         return message.reply(`🛫 Bot menuju ke player **${targetName}** di X: ${pos.x.toFixed(2)}, Y: ${pos.y.toFixed(2)}, Z: ${pos.z.toFixed(2)}`);
   //     }
-  
+
   //     // Jika argumen ada 3, berarti target koordinat
   //     if (args.length === 3) {
   //         const [x, y, z] = args.map(Number);
@@ -337,10 +338,10 @@ function startChopTree() {
   //             return message.reply('⚠️ Koordinat tidak valid.');
   //         }
   //     }
-  
+
   //     return message.reply('⚠️ Format salah! Gunakan `.tp <playerName>` atau `.tp <x> <y> <z>`');
   // }
-  
+
 
   //   if (cmd === '.guard' && (args[0] === 'on' || args[0] === 'off')) {
   //     guardEnabled = args[0] === 'on';
@@ -413,7 +414,7 @@ function startChopTree() {
   //     const mobInfo = nearestMob 
   //       ? `${nearestMob.mobType} di X:${nearestMob.position.x.toFixed(1)} Y:${nearestMob.position.y.toFixed(1)} Z:${nearestMob.position.z.toFixed(1)}`
   //       : 'Tidak ada mobs hostile terdekat.';
-        
+
   //     const statusMsg = `
   //   🟢 Status Bot:
   //   - Wander: ${isWandering ? 'ON' : 'OFF'}
@@ -424,10 +425,10 @@ function startChopTree() {
   //     `;        
   //     message.reply(statusMsg);
   //   }
-    
+
   // });
   // ;
-  
+
 
   // Anti AFK
   function startAntiAfk() {
@@ -512,13 +513,13 @@ function startChopTree() {
         i = (i + 1) % messages.length;
       }, delay);
     }
-    if (!bot.alive) return; 
+    if (!bot.alive) return;
 
-  bot.chat('🔥 Gua hidup lagi bro, lanjut kelayapan...');
+    bot.chat('🔥 Gua hidup lagi bro, lanjut kelayapan...');
   });
   let followInterval = null;
   let discordClient = null;
-bot.once('death', () => {
+  bot.once('death', () => {
     if (followInterval) {
       clearInterval(followInterval);
       followInterval = null;
@@ -528,21 +529,21 @@ bot.once('death', () => {
     if (discordClient) {
       discordClient.channels.cache.get(config.discord.channel).send('☠️ Bot tewas! Semua aktivitas dihentikan.');
     }
-});
+  });
 
 
-    bot.once('death', () => {
-      if (followInterval) {
-        clearInterval(followInterval);
-        followInterval = null;
-      }
-      bot.pathfinder.setGoal(null);
-      bot.chat('☠️ Gua mati bro... semua task gua stop dulu.');
-      if (discordClient) {
-        discordClient.channels.cache.get(config.discord.channel).send('☠️ Bot tewas! Semua aktivitas dihentikan.');
-      }
-    });
-  
+  bot.once('death', () => {
+    if (followInterval) {
+      clearInterval(followInterval);
+      followInterval = null;
+    }
+    bot.pathfinder.setGoal(null);
+    bot.chat('☠️ Gua mati bro... semua task gua stop dulu.');
+    if (discordClient) {
+      discordClient.channels.cache.get(config.discord.channel).send('☠️ Bot tewas! Semua aktivitas dihentikan.');
+    }
+  });
+
   // Chat Handler
   bot.on('chat', (username, message) => {
     if (username === bot.username) return;
@@ -612,24 +613,24 @@ bot.once('death', () => {
     });
   }
 
-  bot.on('end', () => {
+  bot.on('end', (reason) => {
     console.log('[INFO] Bot terputus, mencoba reconnect dalam 10 detik...');
     setTimeout(() => createBot(), 10000);
   });
 
   bot.on('error', err => console.log('[ERROR]', err));
   bot._client.removeAllListeners('passengers');
-bot._client.on('passengers', (packet) => {
-  const vehicle = bot.entities[packet.vehicleId];
-  if (!vehicle) {
-    return;
-  }
-  vehicle.passengers = [];
-  for (const id of packet.passengers) {
-    const passengerEntity = bot.entities[id];
-    if (passengerEntity) vehicle.passengers.push(passengerEntity);
-  }
-});
+  bot._client.on('passengers', (packet) => {
+    const vehicle = bot.entities[packet.vehicleId];
+    if (!vehicle) {
+      return;
+    }
+    vehicle.passengers = [];
+    for (const id of packet.passengers) {
+      const passengerEntity = bot.entities[id];
+      if (passengerEntity) vehicle.passengers.push(passengerEntity);
+    }
+  });
 
 }
 
